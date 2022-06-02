@@ -4,6 +4,7 @@
 #include <imgui_internal.h>
 #include <imgui_helper.h>
 #include <imgui_extra_widget.h>
+#include <dir_iterate.h>
 #include <ImGuiTabWindow.h>
 #include <ImGuiFileDialog.h>
 #ifdef __cplusplus
@@ -1927,7 +1928,8 @@ void Application_Initialize(void** handle)
     sf_file_list.push_back("internal");
     sf_name_list.push_back("internal");
     std::vector<std::string> file_list, name_list;
-    ImGuiHelper::GetAbsoluteFiles(std::string(DEFAULT_SOUNDFONT_PATH), file_list, name_list, false, false);
+    std::vector<std::string> suffix_filter = {"cfg", "sf2"};
+    DIR_Iterate(std::string(DEFAULT_SOUNDFONT_PATH), file_list, name_list, suffix_filter, false, false);
     for (auto f : file_list) sf_file_list.push_back(f);
     for (auto n : name_list) sf_name_list.push_back(n);
     ImGuiFileDialog::Instance()->OpenDialog("embedded", ICON_IGFD_FOLDER_OPEN " Choose File", 
@@ -2089,8 +2091,8 @@ bool Application_Frame(void * handle, bool app_will_quit)
                 auto pos = font_file.find_last_of(".");
                 if (pos != std::string::npos)
                 {
-                    std::string surfix = font_file.substr(pos + 1);
-                    if (surfix.compare("cfg") == 0)
+                    std::string suffix = font_file.substr(pos + 1);
+                    if (suffix.compare("cfg") == 0)
                         font_is_cfg = true;
                 }
                 if (font_is_cfg)
