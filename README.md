@@ -58,7 +58,7 @@ Install dependence library with pacman
 
 - **imgui build**
 
-See imgui document [imgui](imgui/docs/README.md)
+See imgui document [imgui](https://github.com/tanluteam/imgui/blob/master/docs/README.md)
 
 ### Quick start:
 
