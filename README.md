@@ -25,9 +25,13 @@ MIDI player base on timidity and imgui, support soundfont(SF2) and software MIDI
 
   ![midi keyboard Image](images/soft_midi_keyboard.jpg)
 
+  *Software MIDI keyboard mapping* 
+
+  ![midi keyboard mapping](images/soft_midi_keyboard.jpg)
+
 - **Software MIDI keyboard instrument**
 
-  ![midi keyboard instrument Image](images/soft_midi_keyboard_instrument_select.jpg)
+  ![midi keyboard instrument Image](images/keboard_mapping.jpg)
 
 - **Console demo**
 
