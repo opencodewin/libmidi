@@ -1,34 +1,37 @@
-<div align="center">
+<div align="left">
   <img src="images/tanlu-logo.png" height="100" width="100"/>
-  <div align="center">
-    <b><font size="5">天禄 tanlu</font></b>
-    &nbsp;&nbsp;&nbsp;&nbsp;
-  </div>
   <div>&nbsp;</div>
 </div>
-<div align="center">
-
-English | [简体中文](README_zh-CN.md)
+<div align="left">
 
 </div>
 
 # Introduction
-midi player base on timidity and imgui
-### Major features
+MIDI player base on timidity and imgui, support soundfont(SF2) and software MIDI keyboard.
 
-- **Featurs 1**
+- **App main window with paino keyboard view**
 
-  Feature 1 Brief
-  ![Feature 1 Brief Image](images/tanlu-logo.png)
+  ![paino view Image](images/main_window_piano.jpg)
 
-- **Featurs 2**
+- **App main window with event rolling**
 
-  Feature 2 Brief
-  ![Feature 2 Brief Image](https://avatars.githubusercontent.com/u/91240387?s=400&u=b8eb6e6299e2b21120b514d223cdb9ebc00a27ca&v=4)
-  
-- **Featurs 3**
+  ![event view Image](images/main_window_events.jpg)
 
-  Feature 3 Brief
+- **Soundfont Select**
+
+  ![soundfont select Image](images/soundfont_select.jpg)
+
+- **Software MIDI keyboard**
+
+  ![midi keyboard Image](images/soft_midi_keyboard.jpg)
+
+- **Software MIDI keyboard instrument**
+
+  ![midi keyboard instrument Image](images/soft_midi_keyboard_instrument_select.jpg)
+
+- **Console demo**
+
+  ![console demo Image](images/console_demo.jpg)
 
 # Getting the Source
 
@@ -40,11 +43,30 @@ git clone --recurse-submodules https://github.com/tanluteam/libmidi
 
 This project supports [CMake](https://cmake.org/) out of the box.
 
+- **Linux**
+
+Install dependence library ncurses with apt
+
+- **MacOS**
+
+Install dependence library ncurses with homwbrew
+
+- **Windows**
+
+Using MSYS64 + Mingw64 + Clang/GCC
+Install dependence library with pacman
+
+- **imgui build**
+
+See imgui document [imgui](imgui/docs/README.md)
+
 ### Quick start:
 
 ```bash
 mkdir -p build && cd build
 cmake -DCMAKE_BUILD_TYPE=Release .. && cmake --build .
+./build/immidi
+./build/timidity
 ```
 
 # LICENSE
