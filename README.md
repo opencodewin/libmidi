@@ -66,6 +66,12 @@ See imgui document [imgui](https://github.com/tanluteam/imgui/blob/master/docs/R
 
 ### Quick start:
 
+- **download soundfont file**
+*[GoogleDrive](https://drive.google.com/drive/folders/1ZwNonqFTQR1dRY0hijSMQbrLkHfJbkvW?usp=sharing)*.
+*[BaiduYun](https://pan.baidu.com/s/1FIu6PsjO1FnMSABpSgPK8Q?pwd=901u) code: 901u*.
+
+Copy soundfont files into soundfont folder, then you can using extra soundfont(GM best). if you have SF2 format soundfont files, also put them into folder.
+
 ```bash
 mkdir -p build && cd build
 cmake -DCMAKE_BUILD_TYPE=Release .. && cmake --build .
