@@ -2275,12 +2275,13 @@ bool Application_Frame(void * handle, bool app_will_quit)
             ImGui::SetCursorScreenPos(control_view_pos + ImVec2(20 + time_area_x + 64 + 64, (control_view_size.y - 64) / 2));
             if (ImGui::Button(ICON_FA_FLOPPY_DISK "##save_to wav", ImVec2(64, 64)))
             {
-                save_dialog.OpenModal("ChooseFileDlgKey", ICON_IGFD_SAVE " Choose a File", 
-                                                        "Wav files (*.wav){.wav}",
-                                                        ".", "", 1, 
-                                                        IGFDUserDatas("SaveFile"), 
-                                                        ImGuiFileDialogFlags_ConfirmOverwrite |
-                                                        ImGuiFileDialogFlags_CaseInsensitiveExtention);
+                save_dialog.OpenDialog("ChooseFileDlgKey", ICON_IGFD_SAVE " Choose a File", 
+                                        "Wav files (*.wav){.wav}",
+                                        ".", "", 1, 
+                                        IGFDUserDatas("SaveFile"), 
+                                        ImGuiFileDialogFlags_ConfirmOverwrite |
+                                        ImGuiFileDialogFlags_CaseInsensitiveExtention |
+                                        ImGuiFileDialogFlags_Modal);
             }
             ImGui::ShowTooltipOnHover("%s", "Save to Wav");
             
