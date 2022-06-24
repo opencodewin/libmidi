@@ -12,7 +12,11 @@ CONFIGURE_FILE(Config.h.in Config.h)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations -Wno-writable-strings")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations -Wno-writable-strings")
 
+if (APPLE)
 set(FRAMEWORKS_PATH ${PROJECT_BINARY_DIR}/lib)
+else(APPLE)
+set(FRAMEWORKS_PATH ${PROJECT_BINARY_DIR})
+endif(APPLE)
 
 add_subdirectory(libmidi)
 set_target_properties(
