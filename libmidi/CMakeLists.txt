@@ -1,7 +1,13 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.8)
 ## start setting
 PROJECT(midi)
+set(CMAKE_SKIP_RPATH ON)
+set(CMAKE_MACOSX_RPATH 0)
 set(CMAKE_CXX_STANDARD 14)
+if (POLICY CMP0068)
+    cmake_policy(SET CMP0068 NEW)
+endif()
+
 option(USE_STATIC          "Set to ON to build Static Library"  OFF)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations -Wno-writable-strings")
