@@ -56,8 +56,6 @@ TARGET_LINK_LIBRARIES(
 
 if (USE_IMGUI)
 set(IMGUI_ICONS ON CACHE BOOL "Enable Internal Icons Build by Force" FORCE)
-set(IMGUI_VULKAN_SHADER OFF CACHE BOOL "Disable VkShader Build by Force" FORCE)
-set(IMGUI_VULKAN_SHADER OFF CACHE BOOL "Disable VkShader Build by Force" FORCE)
 add_subdirectory(imgui)
 set_target_properties(
     imgui
@@ -65,6 +63,14 @@ set_target_properties(
     LIBRARY_OUTPUT_DIRECTORY "${FRAMEWORKS_PATH}"
     RUNTIME_OUTPUT_DIRECTORY "${FRAMEWORKS_PATH}"
 )
+if(IMGUI_VULKAN_SHADER)
+set_target_properties(
+    VkShader
+    PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${FRAMEWORKS_PATH}"
+    RUNTIME_OUTPUT_DIRECTORY "${FRAMEWORKS_PATH}"
+)
+endif(IMGUI_VULKAN_SHADER)
 
 include_directories(
     ${IMGUI_INCLUDE_DIRS}
@@ -72,6 +78,7 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
     ${PROJECT_BINARY_DIR}
 )
+
 
 if(APPLE)
 set(CMAKE_INSTALL_PREFIX ${PROJECT_BINARY_DIR})
@@ -155,14 +162,9 @@ if(APPLE)
                     "/usr/local/lib/libvulkan.1.3.211.dylib"
             DESTINATION "${frameworks_dir}" COMPONENT Runtime)
 
-
     # Install the built library
-    install(FILES   "${PROJECT_BINARY_DIR}/lib/libimgui.dylib"
-                    "${PROJECT_BINARY_DIR}/lib/libimgui.1.dylib"
-                    "${PROJECT_BINARY_DIR}/lib/libimgui.1.88.00.dylib"
-                    "${PROJECT_BINARY_DIR}/lib/libmidi.dylib"
-                    "${PROJECT_BINARY_DIR}/lib/libmidi.2.dylib"
-                    "${PROJECT_BINARY_DIR}/lib/libmidi.2.15.2.dylib"
+    file(GLOB BUILT_LIBS "${FRAMEWORKS_PATH}/*.dylib")
+    install(FILES   ${BUILT_LIBS}
             DESTINATION "${frameworks_dir}" COMPONENT Runtime)
 
     # package runtime fixup bundle
@@ -170,7 +172,7 @@ if(APPLE)
     set(DIRS "\${CMAKE_INSTALL_PREFIX}/${frameworks_dir}")
     INSTALL(CODE "
         include(BundleUtilities)
-        fixup_bundle(\"${APPS}\"   \"\"   \"${DIRS}\")
+        fixup_bundle(\"${APPS}\"   \"\"  \"${DIRS}\")
     " COMPONENT Runtime)
 
     set(APPLE_CODESIGN_ENTITLEMENTS "${CMAKE_CURRENT_SOURCE_DIR}/test/entitlements.plist")
