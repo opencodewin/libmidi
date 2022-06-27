@@ -5,10 +5,6 @@ set(CMAKE_CXX_STANDARD 14)
 option(USE_STATIC          "Set to ON to build Static Library"  OFF)
 option(USE_IMGUI           "Set to ON to build with imgui test"  ON)
 
-SET(SDK_SOUNDFONT_DIR ${PROJECT_SOURCE_DIR}/soundfont/)
-SET(SDK_DEMO_DIR ${PROJECT_SOURCE_DIR}/midi_demo/)
-CONFIGURE_FILE(Config.h.in Config.h)
-
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations -Wno-writable-strings")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations -Wno-writable-strings")
 
@@ -27,7 +23,6 @@ set_target_properties(
 )
 include_directories(
     ${MIDI_INCLUDE_DIRS}
-    ${PROJECT_BINARY_DIR}
 )
 
 SET(TEST_SOURCE_FILE
@@ -92,7 +87,6 @@ add_executable(
     MACOSX_BUNDLE
     test/immidi.cpp
     ${IMGUI_APP_ENTRY_SRC}
-    ${PROJECT_BINARY_DIR}/Config.h
     ${MACOSX_BUNDLE_ICON_FILE}
 )
 target_link_libraries(
@@ -103,13 +97,13 @@ target_link_libraries(
 # set the Info.plist file
 set(MACOSX_BUNDLE_PLIST_FILE ${CMAKE_SOURCE_DIR}/test/Info.plist)
 set_target_properties(immidi PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${MACOSX_BUNDLE_PLIST_FILE})
+set_target_properties(immidi PROPERTIES MACOSX_BUNDLE TRUE MACOSX_FRAMEWORK_IDENTIFIER com.tanlu.immidi RESOURCE "${RESOURCE_FILES}")
 
 else(APPLE)
 add_executable(
     immidi
     test/immidi.cpp
     ${IMGUI_APP_ENTRY_SRC}
-    ${PROJECT_BINARY_DIR}/Config.h
 )
 target_link_libraries(
     immidi
@@ -164,6 +158,13 @@ if(APPLE)
     )
 
     set(frameworks_dir immidi.app/Contents/Frameworks/)
+    set(resources_dir immidi.app/Contents/Resources/)
+    # Install Resource File
+    install(DIRECTORY  "${PROJECT_SOURCE_DIR}/midi_demo/"
+            DESTINATION "${resources_dir}/midi_demo/" COMPONENT Runtime)
+    install(DIRECTORY  "${PROJECT_SOURCE_DIR}/soundfont/"
+            DESTINATION "${resources_dir}/soundfont/" COMPONENT Runtime)
+
     # Install the SDL (all those installed with brew )
     install(FILES   "/usr/local/opt/sdl2/lib/libSDL2-2.0.0.dylib"
                     "/usr/local/opt/sdl2_image/lib/libSDL2_image-2.0.0.dylib"

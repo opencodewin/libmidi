@@ -1,9 +1,0 @@
-#ifndef _CONFIG_HPP_
-#define _CONFIG_HPP_
-#define DEFAULT_SOUNDFONT_PATH                          "@SDK_SOUNDFONT_DIR@"
-#define DEFAULT_DEMO_PATH                               "@SDK_DEMO_DIR@"
-#endif
-
-// Local Variables:
-// mode: c++
-// End:

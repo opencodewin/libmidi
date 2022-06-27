@@ -32,7 +32,8 @@ extern "C" {
 #include <SDL.h>
 #include <unistd.h>
 #include <iostream>
-#include "Config.h"
+
+#define APP_NAME "MIDI Player"
 
 #if IMGUI_ICONS
 #define DIGITAL_0   ICON_FAD_DIGITAL0
@@ -1881,7 +1882,7 @@ static std::string ReplaceDigital(const std::string str)
 
 void Application_GetWindowProperties(ApplicationWindowProperty& property)
 {
-    property.name = "MIDI Player";
+    property.name = APP_NAME;
     property.viewport = false;
     property.docking = false;
     property.auto_merge = false;
@@ -1924,17 +1925,61 @@ void Application_Initialize(void** handle)
     SDL_Init(SDL_INIT_AUDIO | SDL_INIT_TIMER);
 #endif
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+    auto application_setting_path = ImGuiHelper::settings_path(APP_NAME);
+    auto exec_path = ImGuiHelper::exec_path();
     // init sound font list
     sf_file_list.push_back("internal");
     sf_name_list.push_back("internal");
+    auto soundfont_path = application_setting_path + "soundfont";
+    if (!ImGuiHelper::file_exists(soundfont_path))
+    {
+        if (ImGuiHelper::file_exists(application_setting_path))
+        {
+            ImGuiHelper::create_directory(soundfont_path);
+        }
+    }
+    
+    // add internal soundfonts
+    auto installed_font_path = 
+#if defined(__APPLE__)
+        exec_path + "../Resources/soundfont";
+#else
+        // TODO::Dicky
+        std::string();
+#endif
+    if (ImGuiHelper::file_exists(installed_font_path))
+    {
+        auto gm_path = installed_font_path + PATH_SEP + "midi-gm.cfg";
+        if (ImGuiHelper::file_exists(gm_path))
+        {
+            sf_file_list.push_back(gm_path);
+            sf_name_list.push_back("midi-gm");
+        }
+        auto mini_path = installed_font_path + PATH_SEP + "midi-mini.cfg";
+        if (ImGuiHelper::file_exists(mini_path))
+        {
+            sf_file_list.push_back(mini_path);
+            sf_name_list.push_back("midi-mini");
+        }
+    }
+
     std::vector<std::string> file_list, name_list;
     std::vector<std::string> suffix_filter = {"cfg", "sf2"};
-    DIR_Iterate(std::string(DEFAULT_SOUNDFONT_PATH), file_list, name_list, suffix_filter, false, false);
+    DIR_Iterate(soundfont_path, file_list, name_list, suffix_filter, false, false);
     for (auto f : file_list) sf_file_list.push_back(f);
     for (auto n : name_list) sf_name_list.push_back(n);
+    
+    auto demo_path = 
+#if defined(__APPLE__)
+        exec_path + "../Resources/midi_demo";
+#else
+        // TODO::Dicky need add Windows/Linux default demo path
+        application_setting_path + "midi_demo";
+#endif
+
     ImGuiFileDialog::Instance()->OpenDialog("embedded", ICON_IGFD_FOLDER_OPEN " Choose File", 
                                                             "MIDI files (*.mid *.midi){.mid,.midi}",
-                                                            m_midi_file.empty() ? std::string(DEFAULT_DEMO_PATH) : m_midi_file,
+                                                            m_midi_file.empty() ? demo_path + PATH_SEP : m_midi_file,
                                                             -1, 
                                                             nullptr, 
                                                             ImGuiFileDialogFlags_NoDialog | 
@@ -1950,7 +1995,6 @@ void Application_Initialize(void** handle)
 void Application_Finalize(void** handle)
 {
     libmidi_release();
-    //if (texture_vector) ImGui::ImDestroyTexture(texture_vector);
 #if !IMGUI_APPLICATION_PLATFORM_SDL2
     SDL_Quit();
 #endif
@@ -1986,7 +2030,7 @@ bool Application_Frame(void * handle, bool app_will_quit)
         *out_str = list->at(n).c_str();
         return true; 
     }};
-
+    //ImGui::Text("Exec Path:%s", ImGuiHelper::exec_path().c_str()); // for Test
     ImGui::Begin("Content", nullptr, flags);
 
     if (show_midi_keyboard)

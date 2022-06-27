@@ -91,7 +91,7 @@
 /* you cannot but use safe_malloc(). */
 #define HAVE_SAFE_MALLOC 1
 /* malloc's limit */
-#define MAX_SAFE_MALLOC_SIZE (1 << 26) /* 64M */
+#define MAX_SAFE_MALLOC_SIZE (1 << 26) /* 64M, if midi file including millions voices, need increase memory size */
 
 /* type of floating point number */
 //typedef double FLOAT_T;
@@ -117,7 +117,8 @@ typedef float FLOAT_T;
 
 /* DEFAULT_VOICE is the polyphony number in boot-time.  This value is
     configurable by the command line option (-p) from 1 to until memory is
-    allowed.  If your machine has much CPU power */
+    allowed.  If your machine has much CPU power,  millions voices midi file 
+    maybe need set to 16384 */
 #define DEFAULT_VOICES 512
 
 /*  The size of the internal buffer is 2^AUDIO_BUFFER_BITS samples.
