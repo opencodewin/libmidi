@@ -38,7 +38,7 @@ function(make_appimage)
     get_filename_component(ICON_EXT "${ARGS_ICON}" EXT)
     set(ICON_FILE "${CMAKE_BINARY_DIR}/immidi${ICON_EXT}")
     file(RENAME "${CMAKE_BINARY_DIR}/${TEMP}" "${ICON_FILE}")
-    set(ENV{OUTPUT} "immidi-x86_64.AppImage")
+    set(ENV{OUTPUT} "${ARGS_OUTPUT_NAME}-x86_64.AppImage")
     execute_process(COMMAND ${LINUX_DEPLOY_PATH} --appdir ${APPDIR} -e ${ARGS_EXE} -d ${DESKTOP_FILE} -i ${ICON_FILE} --output appimage)
 
 

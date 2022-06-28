@@ -213,6 +213,27 @@ if(APPLE)
     endif()
 
 elseif(UNIX)
+    set(CPACK_SYSTEM_NAME  "immidi")
+    if (IMGUI_VULKAN)
+        if (IMGUI_SDL2)
+            set(CPACK_SYSTEM_NAME  "immidi_SDL2_Vulkan")
+        elseif (IMGUI_GLFW)
+            set(CPACK_SYSTEM_NAME  "immidi_GLFW_Vulkan")
+        endif()
+    elseif (IMGUI_GL3)
+        if (IMGUI_SDL2)
+            set(CPACK_SYSTEM_NAME  "immidi_SDL2_OpenGL3")
+        elseif (IMGUI_GLFW)
+            set(CPACK_SYSTEM_NAME  "immidi_GLFW_OpenGL3")
+        endif()
+    elseif (IMGUI_GL2)
+        if (IMGUI_SDL2)
+            set(CPACK_SYSTEM_NAME  "immidi_SDL2_OpenGL2")
+        elseif (IMGUI_GLFW)
+            set(CPACK_SYSTEM_NAME  "immidi_GLFW_OpenGL2")
+        endif()
+    endif()
+
     install(CODE "
         include(../cmake/appimage.cmake)
         make_appimage(
@@ -220,7 +241,7 @@ elseif(UNIX)
             NAME \"IMMIDI\"
             DESKTOP \"${PROJECT_SOURCE_DIR}/test/linuxdeploy.desktop\"
             ICON \"${PROJECT_SOURCE_DIR}/test/immidi.png\"
-            OUTPUT_NAME \"${CMAKE_BINARY_DIR}/immidi.AppImage\"
+            OUTPUT_NAME \"${CPACK_SYSTEM_NAME}\"
         )
     " COMPONENT Runtime)
 endif(APPLE)
