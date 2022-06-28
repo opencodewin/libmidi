@@ -260,10 +260,9 @@ elseif(UNIX)
     install(CODE "
         include(../cmake/appimage.cmake)
         make_appimage(
+            PROJECT_DIR \"${PROJECT_SOURCE_DIR}\"
             EXE \"${CMAKE_BINARY_DIR}/immidi\"
             NAME \"IMMIDI\"
-            DESKTOP \"${PROJECT_SOURCE_DIR}/test/linuxdeploy.desktop\"
-            ICON \"${PROJECT_SOURCE_DIR}/test/immidi.png\"
             OUTPUT_NAME \"${CPACK_SYSTEM_NAME}\"
         )
     " COMPONENT Runtime)

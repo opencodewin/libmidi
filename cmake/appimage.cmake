@@ -1,6 +1,6 @@
 function(make_appimage)
 	set(optional)
-	set(args EXE NAME DESKTOP ICON OUTPUT_NAME)
+	set(args PROJECT_DIR EXE NAME OUTPUT_NAME)
 	set(list_args ASSETS)
 	cmake_parse_arguments(
 		PARSE_ARGV 0
@@ -27,55 +27,25 @@ function(make_appimage)
     file(REMOVE_RECURSE "${APPDIR}")       # remove if leftover
     file(MAKE_DIRECTORY "${APPDIR}")
 
-    # use linuxdeploy to generate the appimage
-    message("ARGS_DESKTOP = '${ARGS_DESKTOP}'")
-    file(COPY "${ARGS_DESKTOP}" DESTINATION "${CMAKE_BINARY_DIR}")
-    get_filename_component(TEMP "${ARGS_DESKTOP}" NAME)
+    # copy sound font and midi-demo files
+    file(COPY "${ARGS_PROJECT_DIR}/soundfont" DESTINATION "${APPDIR}/usr")
+    file(COPY "${ARGS_PROJECT_DIR}/midi_demo" DESTINATION "${APPDIR}/usr")
+
+    # prepare desktop and icon file
+    set(DESKTOP_SRC "${ARGS_PROJECT_DIR}/test/linuxdeploy.desktop")
+    file(COPY "${DESKTOP_SRC}" DESTINATION "${CMAKE_BINARY_DIR}")
+    get_filename_component(TEMP "${DESKTOP_SRC}" NAME)
     set(DESKTOP_FILE "${CMAKE_BINARY_DIR}/immidi.desktop")
     file(RENAME "${CMAKE_BINARY_DIR}/${TEMP}" "${DESKTOP_FILE}")
-    file(COPY "${ARGS_ICON}" DESTINATION "${CMAKE_BINARY_DIR}")
-    get_filename_component(TEMP "${ARGS_ICON}" NAME)
-    get_filename_component(ICON_EXT "${ARGS_ICON}" EXT)
+    set(ICON_SRC "${ARGS_PROJECT_DIR}/test/immidi.png")
+    file(COPY "${ICON_SRC}" DESTINATION "${CMAKE_BINARY_DIR}")
+    get_filename_component(TEMP "${ICON_SRC}" NAME)
+    get_filename_component(ICON_EXT "${ICON_SRC}" EXT)
     set(ICON_FILE "${CMAKE_BINARY_DIR}/immidi${ICON_EXT}")
     file(RENAME "${CMAKE_BINARY_DIR}/${TEMP}" "${ICON_FILE}")
+
+    # use linuxdeploy to generate the appimage
     set(ENV{OUTPUT} "${ARGS_OUTPUT_NAME}-x86_64.AppImage")
     execute_process(COMMAND ${LINUX_DEPLOY_PATH} --appdir ${APPDIR} -e ${ARGS_EXE} -d ${DESKTOP_FILE} -i ${ICON_FILE} --output appimage)
-
-
-
-
-
-
-
-
-
-
-
-#     # copy assets to appdir
-#     file(COPY ${ARGS_ASSETS} DESTINATION "${APPDIR}")
-
-#     # copy icon thumbnail
-#     file(COPY ${ARGS_DIR_ICON} DESTINATION "${APPDIR}")
-#     get_filename_component(THUMB_NAME "${ARGS_DIR_ICON}" NAME)
-#     file(RENAME "${APPDIR}/${THUMB_NAME}" "${APPDIR}/.DirIcon")
-
-#     # copy icon highres
-#     file(COPY ${ARGS_ICON} DESTINATION "${APPDIR}")
-#     get_filename_component(ICON_NAME "${ARGS_ICON}" NAME)
-#     get_filename_component(ICON_EXT "${ARGS_ICON}" EXT)
-#     file(RENAME "${APPDIR}/${ICON_NAME}" "${APPDIR}/${ARGS_NAME}${ICON_EXT}")
-
-#     # Create the .desktop file
-#     file(WRITE "${APPDIR}/${ARGS_NAME}.desktop" 
-#     "[Desktop Entry]
-# Type=Application
-# Name=${ARGS_NAME}
-# Icon=${ARGS_NAME}
-# Categories=X-None;"    
-#     )
-
-#     # Invoke AppImageTool
-#     execute_process(COMMAND ${AIT_PATH} ${APPDIR} ${ARGS_OUTPUT_NAME})
-#     file(REMOVE_RECURSE "${APPDIR}")
 
 endfunction()

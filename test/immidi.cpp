@@ -1945,6 +1945,8 @@ void Application_Initialize(void** handle)
         exec_path + "../Resources/soundfont";
 #elif defined(_WIN32)
         exec_path + "../soundfont";
+#elif defined(__linux__)
+        exec_path + "../soundfont";
 #else
         // TODO::Dicky
         std::string();
@@ -1975,6 +1977,8 @@ void Application_Initialize(void** handle)
 #if defined(__APPLE__)
         exec_path + "../Resources/midi_demo";
 #elif defined(_WIN32)
+        exec_path + "../midi_demo";
+#elif defined(__linux__)
         exec_path + "../midi_demo";
 #else
         // TODO::Dicky
