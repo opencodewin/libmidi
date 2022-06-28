@@ -1943,6 +1943,8 @@ void Application_Initialize(void** handle)
     auto installed_font_path = 
 #if defined(__APPLE__)
         exec_path + "../Resources/soundfont";
+#elif defined(_WIN32)
+        exec_path + "../soundfont";
 #else
         // TODO::Dicky
         std::string();
@@ -1972,8 +1974,10 @@ void Application_Initialize(void** handle)
     auto demo_path = 
 #if defined(__APPLE__)
         exec_path + "../Resources/midi_demo";
+#elif defined(_WIN32)
+        exec_path + "../midi_demo";
 #else
-        // TODO::Dicky need add Windows/Linux default demo path
+        // TODO::Dicky
         application_setting_path + "midi_demo";
 #endif
 
