@@ -87,6 +87,8 @@ set(MACOSX_BUNDLE_ICON immidi.icns)
 set(MACOSX_BUNDLE_ICON_FILE ${CMAKE_SOURCE_DIR}/test/${MACOSX_BUNDLE_ICON})
 # set where in the bundle to put the icns file
 set_source_files_properties(${MACOSX_BUNDLE_ICON_FILE} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+#if we need run on MacOS before 12.0, then uncomment following code, but not guarantee it's working
+#set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0") 
 
 add_executable(
     immidi

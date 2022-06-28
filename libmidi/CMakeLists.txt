@@ -8,6 +8,11 @@ if (POLICY CMP0068)
     cmake_policy(SET CMP0068 NEW)
 endif()
 
+#if we need run on MacOS before 12.0, then uncomment following code, but not guarantee it's working
+#if(APPLE)
+#set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0") 
+#endif(APPLE)
+
 option(USE_STATIC          "Set to ON to build Static Library"  OFF)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations -Wno-writable-strings")
