@@ -171,6 +171,8 @@ set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VER_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VER_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VER_PATCH})
 
+#message(STATUS "vulkan library:" ${Vulkan_LIBRARY})
+
 if(APPLE)
     # Bundle target
     set(CPACK_GENERATOR DragNDrop)
@@ -190,31 +192,10 @@ if(APPLE)
     install(DIRECTORY  "${PROJECT_SOURCE_DIR}/soundfont/"
             DESTINATION "${resources_dir}/soundfont/" COMPONENT Runtime)
 
-    # Install the SDL (all those installed with brew )
-    install(FILES   "/usr/local/opt/sdl2/lib/libSDL2-2.0.0.dylib"
-                    "/usr/local/opt/sdl2_image/lib/libSDL2_image-2.0.0.dylib"
-            DESTINATION "${frameworks_dir}" COMPONENT Runtime)
-
-    # Install the glew/glfw (all those installed with brew )
-    install(FILES   "/usr/local/opt/glew/lib/libGLEW.2.2.dylib"
-                    "/usr/local/opt/glew/lib/libGLEW.2.2.0.dylib"
-                    "/usr/local/opt/glfw/lib/libglfw.3.dylib"
-                    "/usr/local/opt/glfw/lib/libglfw.3.3.dylib"
-            DESTINATION "${frameworks_dir}" COMPONENT Runtime)
-
-    # Install the vulkan library (all those installed by Vulkan SDK )
-    install(FILES   "/usr/local/lib/libvulkan.1.dylib"
-                    "/usr/local/lib/libvulkan.1.3.211.dylib"
-            DESTINATION "${frameworks_dir}" COMPONENT Runtime)
-
-    # Install the built library
-    file(GLOB BUILT_LIBS "${FRAMEWORKS_PATH}/*.dylib")
-    install(FILES   ${BUILT_LIBS}
-            DESTINATION "${frameworks_dir}" COMPONENT Runtime)
-
     # package runtime fixup bundle
     set(APPS "\${CMAKE_INSTALL_PREFIX}/immidi.app")
-    set(DIRS "\${CMAKE_INSTALL_PREFIX}/${frameworks_dir}")
+    set(DIRS ${FRAMEWORKS_PATH})
+    list (APPEND DIRS "/usr/local/lib/")
     INSTALL(CODE "
         include(BundleUtilities)
         fixup_bundle(\"${APPS}\"   \"\"  \"${DIRS}\")
