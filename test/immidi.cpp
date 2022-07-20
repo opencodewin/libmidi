@@ -504,10 +504,11 @@ static int ctl_write(char *valp, int32 size)
                 for (int n = 0; n < w; n++)
                 {
                     auto value = channel_data[c].m_db.at<float>(n) + AudioSpectrogramOffset;
-                    if (value < -64) value = -64;
+                    value = ImClamp(value, -64.f, 63.f);
+                    float light = (value + 64) / 127.f;
                     value = (int)((value + 64) + 170) % 255; 
                     auto hue = value / 255.f;
-                    auto color = ImColor::HSV(hue, 1.0, AudioSpectrogramLight);
+                    auto color = ImColor::HSV(hue, 1.0, light * AudioSpectrogramLight);
                     last_line[n] = color;
                 }
             }
@@ -1778,8 +1779,9 @@ static void ShowMediaScopeView(int index, ImVec2 pos, ImVec2 size)
             {
                 int scale_i = i * 255 / size.y;
                 float value = scale_i / 2.0;
+                float light = value / 127.0f;
                 float hue = ((int)(value + 170) % 255) / 255.f;
-                auto color = ImColor::HSV(hue, 1.0, AudioSpectrogramLight);
+                auto color = ImColor::HSV(hue, 1.0, light * AudioSpectrogramLight);
                 ImVec2 p0 = ImVec2(scrop_rect.Max.x - 44, scrop_rect.Max.y - i);
                 ImVec2 p1 = ImVec2(scrop_rect.Max.x - 32, scrop_rect.Max.y - i);
                 draw_list->AddLine(p0, p1, color);
