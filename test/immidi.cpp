@@ -485,7 +485,7 @@ static int ctl_write(char *valp, int32 size)
             channel_data[c].m_fft.clone_from(channel_data[c].m_wave);
             ImGui::ImRFFT((float *)channel_data[c].m_fft.data, channel_data[c].m_fft.w, true);
             channel_data[c].m_db.create_type((channel_data[c].m_fft.w >> 1) + 1, IM_DT_FLOAT32);
-            channel_data[c].m_DBMaxIndex = ImGui::ImReComposeDB((float*)channel_data[c].m_fft.data, (float *)channel_data[c].m_db.data, channel_data[c].m_fft.w);
+            channel_data[c].m_DBMaxIndex = ImGui::ImReComposeDB((float*)channel_data[c].m_fft.data, (float *)channel_data[c].m_db.data, channel_data[c].m_fft.w, false);
             channel_data[c].m_DBShort.create_type(20, IM_DT_FLOAT32);
             ImGui::ImReComposeDBShort((float*)channel_data[c].m_fft.data, (float*)channel_data[c].m_DBShort.data, channel_data[c].m_fft.w);
             channel_data[c].m_DBLong.create_type(76, IM_DT_FLOAT32);
@@ -503,7 +503,7 @@ static int ctl_write(char *valp, int32 size)
                 uint32_t * last_line = (uint32_t *)channel_data[c].m_Spectrogram.row_c<uint8_t>(view_size - 1);
                 for (int n = 0; n < w; n++)
                 {
-                    auto value = channel_data[c].m_db.at<float>(n) + AudioSpectrogramOffset;
+                    float value = channel_data[c].m_db.at<float>(n) * M_SQRT2 + 64 + AudioSpectrogramOffset;
                     value = ImClamp(value, -64.f, 63.f);
                     float light = (value + 64) / 127.f;
                     value = (int)((value + 64) + 170) % 255; 
@@ -1633,7 +1633,9 @@ static void ShowMediaScopeView(int index, ImVec2 pos, ImVec2 size)
                 if (!channel_data[i].m_db.empty())
                 {
                     ImGui::PushID(i);
-                    ImGui::PlotLines("##db", (float *)channel_data[i].m_db.data, channel_data[i].m_db.w, 0, nullptr, 0, 100 / AudioDBScale, channel_view_size, 4, true, true);
+                    ImGui::ImMat db_mat_inv = channel_data[i].m_db.clone();
+                    db_mat_inv += 90.f;
+                    ImGui::PlotLines("##db", (float *)db_mat_inv.data, db_mat_inv.w, 0, nullptr, 0, 90.f / AudioDBScale, channel_view_size, 4, false, true);
                     ImGui::PopID();
                 }
                 draw_list->AddRect(channel_min, channel_max, COL_SLIDER_HANDLE, 0);
@@ -1777,8 +1779,9 @@ static void ShowMediaScopeView(int index, ImVec2 pos, ImVec2 size)
             // draw bar mark
             for (int i = 0; i < size.y; i++)
             {
-                int scale_i = i * 255 / size.y;
-                float value = scale_i / 2.0;
+                float step = 128.0 / size.y;
+                int mark_step = size.y / 9;
+                float value = i * step;
                 float light = value / 127.0f;
                 float hue = ((int)(value + 170) % 255) / 255.f;
                 auto color = ImColor::HSV(hue, 1.0, light * AudioSpectrogramLight);
@@ -1786,14 +1789,15 @@ static void ShowMediaScopeView(int index, ImVec2 pos, ImVec2 size)
                 ImVec2 p1 = ImVec2(scrop_rect.Max.x - 32, scrop_rect.Max.y - i);
                 draw_list->AddLine(p0, p1, color);
                 ImGui::SetWindowFontScale(0.6);
-                if (((int)value - 64) % 10 == 0)
+                if ((i % mark_step) == 0)
                 {
-                    std::string str = std::to_string((int)value - 64) + "dB";
+                    int db_value = 90 - (i / mark_step) * 10;
+                    std::string str = std::to_string(-db_value) + "dB";
                     if (value - 64 > 0) str = "+" + str;
                     ImVec2 p2 = ImVec2(scrop_rect.Max.x - 8, scrop_rect.Max.y - i);
                     ImVec2 p3 = ImVec2(scrop_rect.Max.x, scrop_rect.Max.y - i);
                     draw_list->AddLine(p2, p3, COL_GRATICULE_DARK, 1);
-                    draw_list->AddText(p1 + ImVec2(2, -9), IM_COL32_WHITE, str.c_str());
+                    draw_list->AddText(p1 + ImVec2(2, db_value == 90 ? -9 : -4), IM_COL32_WHITE, str.c_str());
                 }
                 ImGui::SetWindowFontScale(1.0);
             }
