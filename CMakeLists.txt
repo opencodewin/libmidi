@@ -14,6 +14,13 @@ set(PROJECT_VER "${PROJECT_VER_MAJOR}.${PROJECT_VER_MINOR}.${PROJECT_VER_PATCH}"
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations -Wno-writable-strings")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations -Wno-writable-strings")
 
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86|x86_64)")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2 -mavx")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mavx2 -mavx")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.2 -msse4.1 -mssse3 -msse2 -msse")
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse4.2 -msse4.1 -mssse3 -msse2 -msse")
+endif()
+
 if (APPLE)
 set(FRAMEWORKS_PATH ${PROJECT_BINARY_DIR}/lib)
 else(APPLE)
