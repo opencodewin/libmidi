@@ -7,6 +7,7 @@
 </div>
 # News
 - 2022/9/22  Update libmidi version to 2.15.3, we support very large midi file playing such as millions voices midi files
+
  ![millions voices midi demo](midi_demo/test/red_zone_insane_black_remix.mid)
  
 # Introduction
