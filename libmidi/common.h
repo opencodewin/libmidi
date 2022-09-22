@@ -91,7 +91,7 @@
 /* you cannot but use safe_malloc(). */
 #define HAVE_SAFE_MALLOC 1
 /* malloc's limit */
-#define MAX_SAFE_MALLOC_SIZE (1 << 26) /* 64M, if midi file including millions voices, need increase memory size */
+#define MAX_SAFE_MALLOC_SIZE (1 << 27) /* 128M, if midi file including millions voices, need increase memory size */
 
 /* type of floating point number */
 //typedef double FLOAT_T;
@@ -119,7 +119,7 @@ typedef float FLOAT_T;
     configurable by the command line option (-p) from 1 to until memory is
     allowed.  If your machine has much CPU power,  millions voices midi file 
     maybe need set to 16384 */
-#define DEFAULT_VOICES 512
+#define DEFAULT_VOICES 16384
 
 /*  The size of the internal buffer is 2^AUDIO_BUFFER_BITS samples.
     This determines maximum number of samples ever computed in a row.
@@ -177,24 +177,6 @@ typedef float FLOAT_T;
 #define DEFAULT_RATE 48000
 #endif /* DEFAULT_RATE */
 
-/*  The size of the internal buffer is 2^AUDIO_BUFFER_BITS samples.
-    This determines maximum number of samples ever computed in a row.
-
-    For Linux and FreeBSD users:
-
-    This also specifies the size of the buffer fragment.  A smaller
-    fragment gives a faster response in interactive mode -- 10 or 11 is
-    probably a good number. Unfortunately some sound cards emit a click
-    when switching DMA buffers. If this happens to you, try increasing
-    this number to reduce the frequency of the clicks.
-
-    For other systems:
-
-    You should probably use a larger number for improved performance.
-
-*/
-#define AUDIO_BUFFER_BITS 12 /* Maxmum audio buffer size (2^bits) */
-
 /*  1000 here will give a control ratio of 22:1 with 22 kHz output.
     Higher CONTROLS_PER_SECOND values allow more accurate rendering
     of envelopes and tremolo. The cost is CPU time. */
@@ -242,10 +224,10 @@ typedef float FLOAT_T;
 #define USE_LDEXP
 
 /* Define the pre-resampling cache size.
- * This value is default. You can change the cache saze with
+ * This value is default. You can change the cache size with
  * command line option.
  */
-#define DEFAULT_CACHE_DATA_SIZE (4 * 1024 * 1024)
+#define DEFAULT_CACHE_DATA_SIZE (16 * 1024 * 1024)
 
 /* Where do you want to put temporary file into ?
  * If you are in UNIX, you can undefine this macro. If TMPDIR macro is
@@ -339,7 +321,7 @@ typedef float FLOAT_T;
 
 /* Define if you want to allow auto reduce voice.
  */
-//#define AUTO_REDUCE_VOICE_ALLOW
+#define AUTO_REDUCE_VOICE_ALLOW
 
 //#define HAVE_POPEN
 

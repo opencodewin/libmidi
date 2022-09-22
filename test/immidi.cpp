@@ -281,6 +281,7 @@ static int cmsg(int type, int verbosity_level, char *fmt, ...);
 static void ctl_event(CtlEvent *e);
 std::mutex event_mutex;
 std::mutex data_mutex;
+static bool m_loading = false;
 static bool m_running = false;
 static bool m_converting = false;
 static bool m_paused = false;
@@ -616,9 +617,24 @@ static void reset_channels()
     for (int i = 0; i < MAX_CHANNELS; i++) 
     {
         midi_channels[i].events.clear();
-        memset(&midi_channels[i], 0, sizeof(MIDIChannel));
+        midi_channels[i].key_board.reset();
+        memset(midi_channels[i].instrum_name, 0, 128);
+        midi_channels[i].velocity = 0;
+        midi_channels[i].volume = 0;
+        midi_channels[i].expression = 0;
+        midi_channels[i].program = 0;
         midi_channels[i].panning = 64;
         midi_channels[i].pitchbend = 0x2000;
+        midi_channels[i].sustain = 0;
+        midi_channels[i].wheel = 0;
+        midi_channels[i].mute = 0;
+        midi_channels[i].bank = 0;
+        midi_channels[i].bank_lsb = 0;
+        midi_channels[i].bank_msb = 0;
+        midi_channels[i].is_drum = 0;
+        midi_channels[i].bend_mark = 0;
+        midi_channels[i].check_mute = false;
+        midi_channels[i].check_solo = false;
     }
 }
 
@@ -627,21 +643,6 @@ static void reset_events()
     events.clear();
     cuepoint = 0;
     cuepoint_pending = 0;
-}
-
-static std::vector<MIDI_Event>::iterator find_last(int channel, int note)
-{
-    std::vector<MIDI_Event>::iterator it = midi_channels[channel].events.end();
-    while (it != midi_channels[channel].events.begin())
-    {
-        it --;
-        if (it->note == note && isnan(it->end_time))
-        {
-            return it;
-        }
-    }
-
-    return it;
 }
 
 static void parser_events(MidiEvent * events)
@@ -679,10 +680,11 @@ static void parser_events(MidiEvent * events)
                 }
                 else if (type == ME_NOTEOFF)
                 {
-                    std::vector<MIDI_Event>::iterator it = find_last(ch, note);
-                    if (it != midi_channels[ch].events.end())
+                    if (midi_channels[ch].events.size() > 0)
                     {
-                        it->end_time = (float)time / play_mode->rate;
+                        std::vector<MIDI_Event>::iterator it = midi_channels[ch].events.end() - 1;
+                        if (isnan(it->end_time))
+                            it->end_time = (float)time / play_mode->rate;
                     }
                 }
                 else if (type == ME_ALL_NOTES_OFF)
@@ -798,12 +800,14 @@ static void ctl_event(CtlEvent *e)
     switch (e->type)
     {
         case CTLE_NOW_LOADING:      /* v1:filename */
+            m_loading = true;
             break;
         case CTLE_LOADING_DONE:     /* v1:0=success -1=error 1=terminated */
             if (e->v1 == 0)
             {
                 parser_events((MidiEvent *)e->v2);
             }
+            m_loading = false;
             break;
         case CTLE_PLAY_START:       /* v1:nsamples */
             m_running = true;
@@ -1408,7 +1412,7 @@ static void ShowMediaScopeView(int index, ImVec2 pos, ImVec2 size)
                 if (!channel_data[i].m_wave.empty())
                 {
                     ImGui::PushID(i);
-                    ImGui::PlotLines("##wave", (float *)channel_data[i].m_wave.data, channel_data[i].m_wave.w, 0, nullptr, -1.0 / AudioWaveScale , 1.0 / AudioWaveScale, channel_view_size, 4, false, false);
+                    ImGui::PlotLinesEx("##wave", (float *)channel_data[i].m_wave.data, channel_data[i].m_wave.w, 0, nullptr, -1.0 / AudioWaveScale , 1.0 / AudioWaveScale, channel_view_size, 4, false, false);
                     ImGui::PopID();
                 }
                 draw_list->AddRect(channel_min, channel_max, COL_SLIDER_HANDLE, 0);
@@ -1561,7 +1565,7 @@ static void ShowMediaScopeView(int index, ImVec2 pos, ImVec2 size)
                 if (!channel_data[i].m_fft.empty())
                 {
                     ImGui::PushID(i);
-                    ImGui::PlotLines("##fft", (float *)channel_data[i].m_fft.data, channel_data[i].m_fft.w, 0, nullptr, 0.0, 1.0 / AudioFFTScale, channel_view_size, 4, true, true);
+                    ImGui::PlotLinesEx("##fft", (float *)channel_data[i].m_fft.data, channel_data[i].m_fft.w, 0, nullptr, 0.0, 1.0 / AudioFFTScale, channel_view_size, 4, true, true);
                     ImGui::PopID();
                 }
                 draw_list->AddRect(channel_min, channel_max, COL_SLIDER_HANDLE, 0);
@@ -1635,7 +1639,7 @@ static void ShowMediaScopeView(int index, ImVec2 pos, ImVec2 size)
                     ImGui::PushID(i);
                     ImGui::ImMat db_mat_inv = channel_data[i].m_db.clone();
                     db_mat_inv += 90.f;
-                    ImGui::PlotLines("##db", (float *)db_mat_inv.data, db_mat_inv.w, 0, nullptr, 0, 90.f / AudioDBScale, channel_view_size, 4, false, true);
+                    ImGui::PlotLinesEx("##db", (float *)db_mat_inv.data, db_mat_inv.w, 0, nullptr, 0, 90.f / AudioDBScale, channel_view_size, 4, false, true);
                     ImGui::PopID();
                 }
                 draw_list->AddRect(channel_min, channel_max, COL_SLIDER_HANDLE, 0);
@@ -2102,7 +2106,7 @@ bool Application_Frame(void * handle, bool app_will_quit)
     ImGui::SetNextWindowPos(control_pos, ImGuiCond_Always);
     if (ImGui::BeginChild("##Control_Panel_Window", control_size, false, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings))
     {
-        ImGui::BeginDisabled(m_running);
+        ImGui::BeginDisabled(m_running || m_loading);
         // File Dialog
         if (ImGuiFileDialog::Instance()->Display("embedded", ImGuiWindowFlags_NoCollapse, ImVec2(0,0), ImVec2(0,400)))
         {
@@ -2130,7 +2134,7 @@ bool Application_Frame(void * handle, bool app_will_quit)
         ImGui::Separator();
         // Setting
         // Select SoundFont
-        ImGui::BeginDisabled(m_running);
+        ImGui::BeginDisabled(m_running || m_loading);
         int _index = sf_index;
         if (ImGui::Combo("Select Sound Font", &_index, &Funcs::ItemGetter, &sf_name_list, sf_name_list.size()))
         {
@@ -2303,6 +2307,7 @@ bool Application_Frame(void * handle, bool app_will_quit)
             ImGui::BeginDisabled(!midi_is_selected);
             ImGui::SetWindowFontScale(2.0);
             ImGui::SetCursorScreenPos(control_view_pos + ImVec2(20 + time_area_x, (control_view_size.y - 64) / 2));
+            ImGui::BeginDisabled(m_loading);
             if (ImGui::Button(m_running ? (m_paused ? ICON_FA_PLAY : ICON_FA_PAUSE) : ICON_FA_PLAY "##play_pause", ImVec2(64, 64)))
             {
                 if (!m_running)
@@ -2324,12 +2329,13 @@ bool Application_Frame(void * handle, bool app_will_quit)
             ImGui::SetCursorScreenPos(control_view_pos + ImVec2(20 + time_area_x + 64, (control_view_size.y - 64) / 2));
             if (ImGui::Button(ICON_FA_STOP "##stop", ImVec2(64, 64)))
             {
-                if (m_running) push_event(RC_STOP, 0);
+                if (m_running || m_loading) push_event(RC_STOP, 0);
             }
             ImGui::ShowTooltipOnHover("%s", "Stop");
             ImGui::EndDisabled();
+            ImGui::EndDisabled();
 
-            ImGui::BeginDisabled(m_running);
+            ImGui::BeginDisabled(m_running || m_loading);
             ImGui::SetCursorScreenPos(control_view_pos + ImVec2(20 + time_area_x + 64 + 64, (control_view_size.y - 64) / 2));
             if (ImGui::Button(ICON_FA_FLOPPY_DISK "##save_to wav", ImVec2(64, 64)))
             {
@@ -2366,7 +2372,7 @@ bool Application_Frame(void * handle, bool app_will_quit)
             ImGui::ColorSet tick_color = {white_color, white_color, white_color};
             float knob_size = 84.f;
             float knob_step = NAN;
-            ImGui::BeginDisabled(!m_running);
+            ImGui::BeginDisabled(!m_running && !m_loading);
             float main_volume = current_MFnode ? current_MFnode->master_volume : 0;
             float drum_power = opt_drum_power;
             float speed = current_MFnode ? current_MFnode->tempo_ratio : 0;

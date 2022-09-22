@@ -1892,7 +1892,7 @@ int load_font_from_cfg(char* name)
     return errcnt;
 }
 
-#define MIDI_VERSION "2.15.0"
+#define MIDI_VERSION "2.15.3"
 #ifndef PACKAGE_VERSION
 #define PACKAGE_VERSION MIDI_VERSION
 #endif

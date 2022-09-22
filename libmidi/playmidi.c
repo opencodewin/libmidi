@@ -7729,6 +7729,7 @@ static void do_compute_data_midi(int32 count)
             memset(reverb_buffer, 0, chbufidx);
     }
     for (i = 0; i < uv; i++)
+    {
         if (voice[i].status != VOICE_FREE)
         {
             int32 *vpb;
@@ -7755,6 +7756,7 @@ static void do_compute_data_midi(int32 count)
                 ctl_note_event(i);
             }
         }
+    }
 
     while (uv > 0 && voice[uv - 1].status == VOICE_FREE)
         uv--;

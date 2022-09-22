@@ -272,7 +272,7 @@ static double newt_recip[60] = {0, 1, 1.0 / 2, 1.0 / 3, 1.0 / 4, 1.0 / 5, 1.0 / 
                                 1.0 / 57, 1.0 / 58, 1.0 / 59};
 static sample_t *newt_old_src = NULL;
 
-static resample_t resample_newton(sample_t *src, splen_t ofs, resample_rec_t *rec)
+static inline resample_t resample_newton(sample_t *src, splen_t ofs, resample_rec_t *rec)
 {
     int n_new, n_old;
     int32 v1, v2, diff = 0;
@@ -357,7 +357,7 @@ static resample_t resample_newton(sample_t *src, splen_t ofs, resample_rec_t *re
 
 /* Simple linear interpolation */
 
-static resample_t resample_linear(sample_t *src, splen_t ofs, resample_rec_t *rec)
+static inline resample_t resample_linear(sample_t *src, splen_t ofs, resample_rec_t *rec)
 {
     int32 v1, v2, ofsi;
 
@@ -369,7 +369,7 @@ static resample_t resample_linear(sample_t *src, splen_t ofs, resample_rec_t *re
 
 /* No interpolation -- Earplugs recommended for maximum listening enjoyment */
 
-static resample_t resample_none(sample_t *src, splen_t ofs, resample_rec_t *rec)
+static inline resample_t resample_none(sample_t *src, splen_t ofs, resample_rec_t *rec)
 {
     return src[ofs >> FRACTION_BITS];
 }
