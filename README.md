@@ -57,7 +57,7 @@ Install dependence library ncurses with apt
 
 - **MacOS**
 
-Install dependence library ncurses with homwbrew
+Install dependence library ncurses with homebrew
 
 - **Windows**
 
