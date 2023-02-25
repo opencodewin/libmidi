@@ -1,5 +1,5 @@
 <div align="left">
-  <img src="images/tanlu-logo.png" height="100" width="100"/>
+  <img src="test/immidi.png" height="100" width="100"/>
   <div>&nbsp;</div>
 </div>
 <div align="left">
