@@ -44,7 +44,7 @@ MIDI player base on timidity and imgui, support soundfont(SF2) and software MIDI
 # Getting the Source
 
 ```bash
-git clone --recurse-submodules https://github.com/tanluteam/libmidi
+git clone --recurse-submodules https://github.com/opencodewin/libmidi
 ```
 
 # Building
@@ -66,7 +66,7 @@ Install dependence library with pacman
 
 - **imgui build**
 
-See imgui document [imgui](https://github.com/tanluteam/imgui/blob/master/docs/README.md)
+See imgui document [imgui](https://github.com/opencodewin/imgui/blob/master/docs/README.md)
 
 ### Quick start:
 
