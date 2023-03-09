@@ -203,6 +203,7 @@ if(APPLE)
     set(APPS "\${CMAKE_INSTALL_PREFIX}/immidi.app")
     set(DIRS ${FRAMEWORKS_PATH})
     list (APPEND DIRS "/usr/local/lib/")
+    list (APPEND DIRS "${PROJECT_BINARY_DIR}")
     INSTALL(CODE "
         include(BundleUtilities)
         fixup_bundle(\"${APPS}\"   \"\"  \"${DIRS}\")
