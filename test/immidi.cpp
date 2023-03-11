@@ -341,7 +341,7 @@ static int cuepoint_pending = 0;
 #define GS_LCD_MARK_ON -1
 #define GS_LCD_MARK_OFF -2
 #define GS_LCD_MARK_CLEAR -3
-static ImGuiFileDialog save_dialog;
+static ImGuiFileDialog * save_dialog = nullptr;
 static bool midi_is_selected = false;
 static int sf_index = 0;
 static bool b_surround = true;
@@ -2007,11 +2007,14 @@ void Application_Initialize(void** handle)
                                                             ImGuiFileDialogFlags_DisableCreateDirectoryButton | 
                                                             ImGuiFileDialogFlags_ReadOnlyFileNameField |
                                                             ImGuiFileDialogFlags_CaseInsensitiveExtention);
+
+    save_dialog = new ImGuiFileDialog();
     libmidi_init();
 }
 
 void Application_Finalize(void** handle)
 {
+    if (save_dialog) delete save_dialog;
     libmidi_release();
 #if !IMGUI_APPLICATION_PLATFORM_SDL2
     SDL_Quit();
@@ -2124,15 +2127,15 @@ bool Application_Frame(void * handle, bool app_will_quit)
                 midi_log.AddLog("[App ] - Start Play\n");
             }
         }
-        if (save_dialog.Display("ChooseFileDlgKey", ImGuiWindowFlags_NoCollapse, ImVec2(400,600), ImVec2(FLT_MAX, FLT_MAX)))
+        if (save_dialog->Display("ChooseFileDlgKey", ImGuiWindowFlags_NoCollapse, ImVec2(400,600), ImVec2(FLT_MAX, FLT_MAX)))
         {
-            if (!m_running && save_dialog.IsOk())
+            if (!m_running && save_dialog->IsOk())
             {
-                m_wav_file = save_dialog.GetFilePathName();
+                m_wav_file = save_dialog->GetFilePathName();
                 play_thread = new std::thread(thread_convert_to_wav, std::ref(m_midi_file), std::ref(m_wav_file));
                 midi_log.AddLog("[App ] - Start Convert\n");
             }
-            save_dialog.Close();
+            save_dialog->Close();
         }
         ImGui::EndDisabled();
         ImGui::Separator();
@@ -2343,7 +2346,7 @@ bool Application_Frame(void * handle, bool app_will_quit)
             ImGui::SetCursorScreenPos(control_view_pos + ImVec2(20 + time_area_x + 64 + 64, (control_view_size.y - 64) / 2));
             if (ImGui::Button(ICON_FA_FLOPPY_DISK "##save_to wav", ImVec2(64, 64)))
             {
-                save_dialog.OpenDialog("ChooseFileDlgKey", ICON_IGFD_SAVE " Choose a File", 
+                save_dialog->OpenDialog("ChooseFileDlgKey", ICON_IGFD_SAVE " Choose a File", 
                                         "Wav files (*.wav){.wav}",
                                         ".", "", 1, 
                                         IGFDUserDatas("SaveFile"), 
