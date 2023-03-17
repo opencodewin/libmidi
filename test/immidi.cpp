@@ -1890,18 +1890,7 @@ static std::string ReplaceDigital(const std::string str)
     return result;
 }
 
-void Application_GetWindowProperties(ApplicationWindowProperty& property)
-{
-    property.name = APP_NAME;
-    property.viewport = false;
-    property.docking = false;
-    property.auto_merge = false;
-    property.power_save = true;
-    property.width = 1680;
-    property.height = 960;
-}
-
-void Application_SetupContext(ImGuiContext* ctx)
+static void Midi_SetupContext(ImGuiContext* ctx)
 {
 #ifdef USE_BOOKMARK
     ImGuiSettingsHandler bookmark_ini_handler;
@@ -1929,7 +1918,7 @@ void Application_SetupContext(ImGuiContext* ctx)
 #endif
 }
 
-void Application_Initialize(void** handle)
+static void Midi_Initialize(void** handle)
 {
 #if !IMGUI_APPLICATION_PLATFORM_SDL2
     SDL_Init(SDL_INIT_AUDIO | SDL_INIT_TIMER);
@@ -2012,7 +2001,7 @@ void Application_Initialize(void** handle)
     libmidi_init();
 }
 
-void Application_Finalize(void** handle)
+static void Midi_Finalize(void** handle)
 {
     if (save_dialog) delete save_dialog;
     libmidi_release();
@@ -2021,11 +2010,7 @@ void Application_Finalize(void** handle)
 #endif
 }
 
-void Application_DropFromSystem(std::vector<std::string>& drops)
-{
-}
-
-bool Application_Frame(void * handle, bool app_will_quit)
+static bool Midi_Frame(void * handle, bool app_will_quit)
 {
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     bool multiviewport = io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable;
@@ -2599,4 +2584,20 @@ bool Application_Frame(void * handle, bool app_will_quit)
         }
     }
     return app_will_quit;
+}
+
+void Application_Setup(ApplicationWindowProperty& property)
+{
+    property.name = APP_NAME;
+    property.viewport = false;
+    property.docking = false;
+    property.auto_merge = false;
+    property.power_save = true;
+    property.width = 1680;
+    property.height = 960;
+
+    property.application.Application_SetupContext = Midi_SetupContext;
+    property.application.Application_Initialize = Midi_Initialize;
+    property.application.Application_Finalize = Midi_Finalize;
+    property.application.Application_Frame = Midi_Frame;
 }
