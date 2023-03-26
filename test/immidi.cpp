@@ -1890,7 +1890,7 @@ static std::string ReplaceDigital(const std::string str)
     return result;
 }
 
-static void Midi_SetupContext(ImGuiContext* ctx)
+static void Midi_SetupContext(ImGuiContext* ctx, bool in_splash)
 {
 #ifdef USE_BOOKMARK
     ImGuiSettingsHandler bookmark_ini_handler;
