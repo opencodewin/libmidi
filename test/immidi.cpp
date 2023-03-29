@@ -529,7 +529,8 @@ static int ctl_write(char *valp, int32 size)
                 float hw = AudioVector.w / 2;
                 float hh = AudioVector.h / 2;
                 int samples = channel_data[0].m_wave.w;
-                AudioVector *= 0.99;
+                //AudioVector *= 0.99;
+                AudioVector -= 128;
                 for (int n = 0; n < samples; n++)
                 {
                     float s1 = channel_data[0].m_wave.at<float>(n);
