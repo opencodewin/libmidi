@@ -1778,7 +1778,7 @@ static void ShowMediaScopeView(int index, ImVec2 pos, ImVec2 size)
                 {
                     ImVec2 texture_pos = center - ImVec2(channel_view_size.y / 2, channel_view_size.x / 2);
                     ImGui::ImMatToTexture(channel_data[i].m_Spectrogram, channel_data[i].texture_spectrogram);
-                    ImGui::ImDrawListAddImageRotate(draw_list, channel_data[i].texture_spectrogram, texture_pos, ImVec2(channel_view_size.y, channel_view_size.x), -90.0);
+                    ImGui::AddImageRotate(draw_list, channel_data[i].texture_spectrogram, texture_pos, ImVec2(channel_view_size.y, channel_view_size.x), -90.0);
                 }
             }
             // draw bar mark
