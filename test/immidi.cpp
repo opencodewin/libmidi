@@ -1986,7 +1986,7 @@ static void Midi_Initialize(void** handle)
 #endif
 
     ImGuiFileDialog::Instance()->OpenDialog("embedded", ICON_IGFD_FOLDER_OPEN " Choose File", 
-                                                            "MIDI files (*.mid *.midi){.mid,.midi}",
+                                                            "MIDI files (*.mid *.midi){.mid,.midi,.MID,.MIDI}",
                                                             m_midi_file.empty() ? demo_path + PATH_SEP : m_midi_file,
                                                             -1, 
                                                             nullptr, 
