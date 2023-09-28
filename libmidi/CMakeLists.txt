@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 ## start setting
 PROJECT(midi)
-set(CMAKE_SKIP_RPATH ON)
 set(CMAKE_MACOSX_RPATH 0)
 set(CMAKE_CXX_STANDARD 14)
 if (POLICY CMP0068)
