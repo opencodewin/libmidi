@@ -10,7 +10,6 @@ set(PROJECT_VER_MINOR 0)
 set(PROJECT_VER_PATCH 2)
 set(PROJECT_VER "${PROJECT_VER_MAJOR}.${PROJECT_VER_MINOR}.${PROJECT_VER_PATCH}")
 
-
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations -Wno-writable-strings")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations -Wno-writable-strings")
 
@@ -23,6 +22,7 @@ endif()
 
 if (APPLE)
 set(FRAMEWORKS_PATH ${PROJECT_BINARY_DIR}/lib)
+add_link_options(-ld_classic)
 else(APPLE)
 set(FRAMEWORKS_PATH ${PROJECT_BINARY_DIR})
 endif(APPLE)
