@@ -4,6 +4,7 @@
 #include <imgui_internal.h>
 #include <imgui_helper.h>
 #include <imgui_extra_widget.h>
+#include <imgui_fft.h>
 #include <dir_iterate.h>
 #include <ImGuiTabWindow.h>
 #include <ImGuiFileDialog.h>
