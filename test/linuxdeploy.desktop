@@ -2,5 +2,6 @@
 Type=Application
 Name=IMMIDI
 Categories=AudioVideo;
+MimeType=audio/midi;
 Exec=immidi
 Icon=immidi
