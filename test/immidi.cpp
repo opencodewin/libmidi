@@ -564,7 +564,7 @@ static int ctl_write(char *valp, int32 size)
                     uint8_t r = ImClamp(AudioVector.at<uint8_t>(x, y, 0) + 30, 0, 255);
                     uint8_t g = ImClamp(AudioVector.at<uint8_t>(x, y, 1) + 50, 0, 255);
                     uint8_t b = ImClamp(AudioVector.at<uint8_t>(x, y, 2) + 30, 0, 255);
-                    AudioVector.draw_dot(x, y, ImPixel(r / 255.0, g / 255.0, b / 255.0, 1.f));
+                    AudioVector.set_pixel(x, y, ImPixel(r / 255.0, g / 255.0, b / 255.0, 1.f));
                 }
             }
         }
@@ -1894,7 +1894,7 @@ static std::string ReplaceDigital(const std::string str)
 
 static void Midi_SetupContext(ImGuiContext* ctx, void * handle, bool in_splash)
 {
-#ifdef USE_BOOKMARK
+#ifdef USE_PLACES_FEATURE
     ImGuiSettingsHandler bookmark_ini_handler;
     bookmark_ini_handler.TypeName = "BookMark";
     bookmark_ini_handler.TypeHash = ImHashStr("BookMark");
@@ -1905,13 +1905,13 @@ static void Midi_SetupContext(ImGuiContext* ctx, void * handle, bool in_splash)
     bookmark_ini_handler.ReadLineFn = [](ImGuiContext* ctx, ImGuiSettingsHandler* handler, void* entry, const char* line) -> void
     {
         IGFD::FileDialog * dialog = (IGFD::FileDialog *)entry;
-        dialog->DeserializeBookmarks(line);
+        dialog->DeserializePlaces(line);
     };
     bookmark_ini_handler.WriteAllFn = [](ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* out_buf)
     {
         ImGuiContext& g = *ctx;
         out_buf->reserve(out_buf->size() + g.SettingsWindows.size() * 6); // ballpark reserve
-        auto bookmark = ImGuiFileDialog::Instance()->SerializeBookmarks();
+        auto bookmark = ImGuiFileDialog::Instance()->SerializePlaces();
         out_buf->appendf("[%s][##%s]\n", handler->TypeName, handler->TypeName);
         out_buf->appendf("%s\n", bookmark.c_str());
         out_buf->append("\n");
@@ -1986,18 +1986,22 @@ static void Midi_Initialize(void** handle)
         application_setting_path + "midi_demo";
 #endif
 
+    IGFD::FileDialogConfig config;
+    config.path = demo_path;
+    config.filePathName = m_midi_file.empty() ? demo_path + PATH_SEP : m_midi_file;
+    config.countSelectionMax = -1;
+    config.flags = ImGuiFileDialogFlags_NoDialog |
+                            ImGuiFileDialogFlags_NoButton |
+                            ImGuiFileDialogFlags_DontShowHiddenFiles |
+                            ImGuiFileDialogFlags_HideColumnDate |
+                            ImGuiFileDialogFlags_ShowBookmark |
+                            ImGuiFileDialogFlags_ReadOnlyFileNameField |
+                            ImGuiFileDialogFlags_CaseInsensitiveExtention |
+                            ImGuiFileDialogFlags_AllowDirectorySelect |
+                            ImGuiFileDialogFlags_PathDecompositionShort;
     ImGuiFileDialog::Instance()->OpenDialog("embedded", ICON_IGFD_FOLDER_OPEN " Choose File", 
                                                             "MIDI files (*.mid *.midi){.mid,.midi,.MID,.MIDI}",
-                                                            m_midi_file.empty() ? demo_path + PATH_SEP : m_midi_file,
-                                                            -1, 
-                                                            nullptr, 
-                                                            ImGuiFileDialogFlags_NoDialog | 
-                                                            ImGuiFileDialogFlags_NoButton |
-                                                            ImGuiFileDialogFlags_PathDecompositionShort |
-                                                            ImGuiFileDialogFlags_DisableBookmarkMode | 
-                                                            ImGuiFileDialogFlags_DisableCreateDirectoryButton | 
-                                                            ImGuiFileDialogFlags_ReadOnlyFileNameField |
-                                                            ImGuiFileDialogFlags_CaseInsensitiveExtention);
+                                                            config);
 
     save_dialog = new ImGuiFileDialog();
     libmidi_init();
@@ -2333,13 +2337,18 @@ static bool Midi_Frame(void * handle, bool app_will_quit)
             ImGui::SetCursorScreenPos(control_view_pos + ImVec2(20 + time_area_x + 64 + 64, (control_view_size.y - 64) / 2));
             if (ImGui::Button(ICON_FA_FLOPPY_DISK "##save_to wav", ImVec2(64, 64)))
             {
+                IGFD::FileDialogConfig config;
+                config.path = ".";
+                config.countSelectionMax = 1;
+                config.userDatas = IGFDUserDatas("SaveFile");
+                config.flags = ImGuiFileDialogFlags_ShowBookmark |
+                            ImGuiFileDialogFlags_DontShowHiddenFiles |
+                            ImGuiFileDialogFlags_CaseInsensitiveExtention |
+                            ImGuiFileDialogFlags_ConfirmOverwrite |
+                            ImGuiFileDialogFlags_Modal;
                 save_dialog->OpenDialog("ChooseFileDlgKey", ICON_IGFD_SAVE " Choose a File", 
                                         "Wav files (*.wav){.wav}",
-                                        ".", "", 1, 
-                                        IGFDUserDatas("SaveFile"), 
-                                        ImGuiFileDialogFlags_ConfirmOverwrite |
-                                        ImGuiFileDialogFlags_CaseInsensitiveExtention |
-                                        ImGuiFileDialogFlags_Modal);
+                                        config);
             }
             ImGui::ShowTooltipOnHover("%s", "Save to Wav");
             
