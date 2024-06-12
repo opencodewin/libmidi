@@ -2334,7 +2334,7 @@ static bool Midi_Frame(void * handle, bool app_will_quit)
             ImGui::ShowTooltipOnHover("%s", "Stop");
             ImGui::EndDisabled();
             ImGui::EndDisabled();
-            if (!m_running)
+            if (!m_running || m_paused)
             {
                 if (channel_data[0].m_decibel >= 0) channel_data[0].m_decibel = ImMax(channel_data[0].m_decibel - 4.f, 0.f);
                 if (channel_data[1].m_decibel >= 0) channel_data[1].m_decibel = ImMax(channel_data[1].m_decibel - 4.f, 0.f);
