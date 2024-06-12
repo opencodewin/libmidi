@@ -5,7 +5,7 @@
 typedef struct _SFChunk
 {
     char id[4];
-    int32 size;
+    uint32 size;
 } SFChunk;
 
 /* generator record */
@@ -50,10 +50,10 @@ typedef struct _SFInstHdr
 typedef struct _SFSampleInfo
 {
     char name[20];
-    int32 startsample, endsample;
-    int32 startloop, endloop;
+    uint32 startsample, endsample;
+    uint32 startloop, endloop;
     /* ver.2 additional info */
-    int32 samplerate;
+    uint32 samplerate;
     uint8 originalPitch;
     int8 pitchCorrection;
     uint16 samplelink;
@@ -76,10 +76,11 @@ typedef struct _SFInfo
     uint16 version, minorversion;
     /* sample position (from origin) & total size (in bytes) */
     long samplepos;
-    int32 samplesize;
+    uint32 samplesize;
 
     /* raw INFO chunk list */
-    long infopos, infosize;
+    long infopos;
+	uint32 infosize;
 
     /* preset headers */
     int npresets;

@@ -57,8 +57,8 @@ typedef struct _SampleList
 {
     Sample v;
     struct _SampleList *next;
-    int32 start;
-    int32 len;
+    long start; /* file offset */
+    uint32 len;
     int32 cutoff_freq;
     int16 resonance;
     int16 root, tune;
@@ -167,7 +167,7 @@ static void set_rootfreq(SampleList *vp);
 static int32 to_offset(int32 offset);
 static int32 to_rate(int32 diff, int timecent);
 static int32 calc_rate(int32 diff, double msec);
-static double to_msec(int timecent);
+static double to_sec(int timecent);
 static int32 calc_sustain(int sust_cB);
 static void convert_volume_envelope(SampleList *vp, LayerTable *tbl);
 static void convert_tremolo(SampleList *vp, LayerTable *tbl);
@@ -612,9 +612,9 @@ static int32 to_rate(int32 diff, int timecent)
 /*
  * convert timecents to sec
  */
-static double to_msec(int timecent)
+static double to_sec(int timecent)
 {
-    return timecent == -12000 ? 0 : 1000.0 * pow(2.0, (double)timecent / 1200.0);
+    return timecent == -12000 ? 0 : pow(2.0, (double)timecent / 1200.0);
 }
 
 /*
@@ -1197,7 +1197,7 @@ static int make_patch(SFInfo *sf, int pridx, LayerTable *tbl)
         else
         {
             SampleList *cur, *prev;
-            int32 start;
+            long start;
 
             /* Insert sample */
             start = sp->start;
@@ -1297,13 +1297,14 @@ static void set_envelope_parameters(SampleList *vp)
 static void set_sample_info(SFInfo *sf, SampleList *vp, LayerTable *tbl)
 {
     SFSampleInfo *sp = &sf->sample[tbl->val[SF_sampleId]];
+    int32 len;
 
     /* set sample position */
     vp->start = (tbl->val[SF_startAddrsHi] << 15) + tbl->val[SF_startAddrs] + sp->startsample;
-    vp->len = (tbl->val[SF_endAddrsHi] << 15) + tbl->val[SF_endAddrs] + sp->endsample - vp->start;
+    len = (tbl->val[SF_endAddrsHi] << 15) + tbl->val[SF_endAddrs] + sp->endsample - vp->start;
 
-    vp->start = abs(vp->start);
-    vp->len = abs(vp->len);
+    vp->start = labs(vp->start);
+    vp->len = abs(len);
 
     /* set loop position */
     vp->v.loop_start = (tbl->val[SF_startloopAddrsHi] << 15) + tbl->val[SF_startloopAddrs] + sp->startloop - vp->start;
@@ -1520,8 +1521,11 @@ static void set_init_info(SFInfo *sf, SampleList *vp, LayerTable *tbl)
 
     /* initial cutoff & resonance */
     vp->cutoff_freq = 0;
-    if ((int)tbl->val[SF_initialFilterFc] < 0)
-        tbl->set[SF_initialFilterFc] = tbl->val[SF_initialFilterFc] = 0;
+    if((int)tbl->val[SF_initialFilterFc] < 0)
+    {
+        tbl->set[SF_initialFilterFc] = 0;
+        tbl->val[SF_initialFilterFc] = 0;
+    }
     if (current_sfrec->def_cutoff_allowed && tbl->set[SF_initialFilterFc] && (int)tbl->val[SF_initialFilterFc] >= 1500 && (int)tbl->val[SF_initialFilterFc] <= 13500)
     {
         val = (int)tbl->val[SF_initialFilterFc];
@@ -1548,8 +1552,7 @@ static void set_init_info(SFInfo *sf, SampleList *vp, LayerTable *tbl)
     vp->resonance = 0;
     if (current_sfrec->def_resonance_allowed && tbl->set[SF_initialFilterQ])
     {
-        val = (int)tbl->val[SF_initialFilterQ];
-        vp->resonance = val;
+        vp->resonance = tbl->val[SF_initialFilterQ];
     }
     vp->v.resonance = vp->resonance;
 }
@@ -1661,8 +1664,7 @@ static void convert_volume_envelope(SampleList *vp, LayerTable *tbl)
         vp->release = calc_rate(65535, modify_release);
     else
         vp->release = to_rate(65535, tbl->val[SF_releaseEnv2]);
-    vp->v.envelope_delay = play_mode->rate *
-                           to_msec(tbl->val[SF_delayEnv2]) * 0.001;
+    vp->v.envelope_delay = play_mode->rate * to_sec(tbl->val[SF_delayEnv2]);
 
     /* convert modulation envelope */
     vp->modattack = to_rate(65535, tbl->val[SF_attackEnv1]);
@@ -1673,8 +1675,7 @@ static void convert_volume_envelope(SampleList *vp, LayerTable *tbl)
         vp->modrelease = calc_rate(65535, modify_release);
     else
         vp->modrelease = to_rate(65535, tbl->val[SF_releaseEnv1]);
-    vp->v.modenv_delay = play_mode->rate *
-                         to_msec(tbl->val[SF_delayEnv1]) * 0.001;
+    vp->v.modenv_delay = play_mode->rate * to_sec(tbl->val[SF_delayEnv1]);
 
     vp->v.modes |= MODES_ENVELOPE;
 }
@@ -1710,8 +1711,7 @@ static void convert_tremolo(SampleList *vp, LayerTable *tbl)
 
     /* convert mHz to sine table increment; 1024<<rate_shift=1wave */
     vp->v.tremolo_phase_increment = ((play_mode->rate / 1000 * freq) >> RATE_SHIFT) / control_ratio;
-    vp->v.tremolo_delay = play_mode->rate *
-                          to_msec(tbl->val[SF_delayLfo1]) * 0.001;
+    vp->v.tremolo_delay = play_mode->rate * to_sec(tbl->val[SF_delayLfo1]);
 }
 #endif
 
@@ -1760,8 +1760,7 @@ static void convert_vibrato(SampleList *vp, LayerTable *tbl)
                                       (freq * 2 * VIBRATO_SAMPLE_INCREMENTS);
     }
 
-    vp->v.vibrato_delay = play_mode->rate *
-                          to_msec(tbl->val[SF_delayLfo2]) * 0.001;
+    vp->v.vibrato_delay = play_mode->rate * to_sec(tbl->val[SF_delayLfo2]);
 }
 #endif
 
@@ -2014,7 +2013,8 @@ static int cmsg(int type, int verbosity_level, char *fmt, ...)
 static void ctl_event(CtlEvent *e) {}
 ControlMode w32gui_control_mode =
     {
-        "w32gui interface", 'd',
+        "Win32 GUI interface", 'w',
+        "w32gui",
         1, 0, 0,
         0,
         ctl_open,
@@ -2311,7 +2311,7 @@ int main(int argc, char **argv)
                         {
                             Instrument *inst;
                             float freq;
-                            int chord, note;
+                            int chord;
 
                             inst = try_load_soundfont(sf, -1, 128, x_preset, x_keynote);
                             if (inst != NULL)

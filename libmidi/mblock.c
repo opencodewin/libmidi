@@ -99,6 +99,9 @@ static void reuse_mblock1(MBlockNode *p)
     else /* p->block_size <= MIN_MBLOCK_SIZE */
     {
         p->next = free_mblock_list;
+#ifdef DEBUG
+        memset(p->buffer, 0xa5, p->block_size);
+#endif
         free_mblock_list = p;
     }
 }

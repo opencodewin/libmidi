@@ -7,6 +7,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <fcntl.h> /* for open */
+#include <math.h>
 #include <signal.h>
 #include <getopt.h>
 #include <SDL.h>
@@ -425,10 +426,6 @@ extern char *pcm_alternate_file;
  * "auto":       automatically selected
  * filename:     use the one.
  */
-
-#ifndef atof
-extern double atof(const char *);
-#endif
 
 /*! copy bank and, if necessary, map appropriately */
 static void copybank(ToneBank *to, ToneBank *from, int mapid, int bankmapfrom, int bankno)
@@ -1093,7 +1090,9 @@ MAIN_INTERFACE int read_config_file(char *name, int self, int allow_missing_file
     else
         tf = open_file(name, 1, allow_missing_file ? OF_NORMAL : OF_VERBOSE);
     if (tf == NULL)
+    {
         return allow_missing_file ? READ_CONFIG_FILE_NOT_FOUND : READ_CONFIG_ERROR;
+    }
 
     init_mblock(&varbuf);
     if (!self)

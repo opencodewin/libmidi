@@ -379,6 +379,12 @@ typedef struct
 #define PAN_DELAY_BUF_MAX 48 /* 0.5ms in 96kHz */
 #endif                       /* ENABLE_PAN_DELAY */
 
+#if SAMPLE_LENGTH_BITS == 32 && TIMIDITY_HAVE_INT64
+typedef int64 spoff_fixed_t;	/* sample offset must be signed */
+#else
+typedef splen_t spoff_fixed_t;
+#endif
+
 typedef struct
 {
     uint8
@@ -386,11 +392,7 @@ typedef struct
         channel, note, velocity;
     int vid, temper_instant;
     Sample *sample;
-#if SAMPLE_LENGTH_BITS == 32 && MIDI_HAVE_INT64
-    int64 sample_offset; /* sample_offset must be signed */
-#else
-    splen_t sample_offset;
-#endif
+    spoff_fixed_t sample_offset;
     int32
         orig_frequency,
         frequency, sample_increment,
@@ -576,6 +578,7 @@ extern int play_midi_file(char *fn);
 extern int dumb_pass_playing_list(int number_of_files, char *list_of_files[]);
 extern void default_ctl_lyric(int lyricid);
 extern int check_apply_control(void);
+extern void kill_all_voices(void);
 extern void recompute_freq(int v);
 extern int midi_drumpart_change(int ch, int isdrum);
 extern void ctl_note_event(int noteID);
@@ -593,6 +596,7 @@ extern void play_midi_setup_drums(int ch, int note);
 /* For stream player */
 extern void playmidi_stream_init(int restart);
 extern void playmidi_tmr_reset(void);
+extern void playmidi_stream_free(void);
 extern int play_event(MidiEvent *ev);
 extern void reset_midi(int playing);
 

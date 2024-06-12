@@ -125,6 +125,7 @@ extern int convert_midi_control_change(int chn, int type, int val, MidiEvent *ev
 extern int unconvert_midi_control_change(MidiEvent *ev);
 extern char *readmidi_make_string_event(int type, char *string, MidiEvent *ev, int cnv);
 extern void free_time_segments(void);
+extern void readmidi_read_init(void);
 extern MidiEvent *read_midi_file(struct midi_file *mtf, int32 *count, int32 *sp, char *file_name);
 extern struct midi_file_info *get_midi_file_info(char *filename, int newp);
 extern struct midi_file_info *new_midi_file_info(const char *filename);

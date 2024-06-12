@@ -76,16 +76,16 @@ static int READSTR(char *str, struct midi_file *tf)
 /*----------------------------------------------------------------*/
 
 static int chunkid(char *id);
-static int process_list(int size, SFInfo *sf, struct midi_file *fd);
-static int process_info(int size, SFInfo *sf, struct midi_file *fd);
-static int process_sdta(int size, SFInfo *sf, struct midi_file *fd);
-static int process_pdta(int size, SFInfo *sf, struct midi_file *fd);
-static void load_sample_names(int size, SFInfo *sf, struct midi_file *fd);
-static void load_preset_header(int size, SFInfo *sf, struct midi_file *fd);
-static void load_inst_header(int size, SFInfo *sf, struct midi_file *fd);
-static void load_bag(int size, SFBags *bagp, struct midi_file *fd);
-static void load_gen(int size, SFBags *bagp, struct midi_file *fd);
-static void load_sample_info(int size, SFInfo *sf, struct midi_file *fd);
+static int process_list(uint32 size, SFInfo *sf, struct midi_file *fd);
+static int process_info(uint32 size, SFInfo *sf, struct midi_file *fd);
+static int process_sdta(uint32 size, SFInfo *sf, struct midi_file *fd);
+static int process_pdta(uint32 size, SFInfo *sf, struct midi_file *fd);
+static void load_sample_names(uint32 size, SFInfo *sf, struct midi_file *fd);
+static void load_preset_header(uint32 size, SFInfo *sf, struct midi_file *fd);
+static void load_inst_header(uint32 size, SFInfo *sf, struct midi_file *fd);
+static void load_bag(uint32 size, SFBags *bagp, struct midi_file *fd);
+static void load_gen(uint32 size, SFBags *bagp, struct midi_file *fd);
+static void load_sample_info(uint32 size, SFInfo *sf, struct midi_file *fd);
 static void convert_layers(SFInfo *sf);
 static void generate_layers(SFHeader *hdr, SFHeader *next, SFBags *bags);
 static void free_layer(SFHeader *hdr);
@@ -141,6 +141,7 @@ enum
 int load_soundfont(SFInfo *sf, struct midi_file *fd)
 {
     SFChunk chunk;
+    int result = 0;
 
     sf->preset = NULL;
     sf->sample = NULL;
@@ -171,20 +172,30 @@ int load_soundfont(SFInfo *sf, struct midi_file *fd)
     {
         if (READCHUNK(&chunk, fd) <= 0)
             break;
-        else if (chunkid(chunk.id) == LIST_ID)
+        if (chunkid(chunk.id) == LIST_ID)
         {
-            if (process_list(chunk.size, sf, fd))
-                break;
-        }
+			if (process_list(chunk.size, sf, fd))
+            {
+				ctl->cmsg(CMSG_ERROR, VERB_NORMAL,
+					"%s: *** could not process list", current_filename);
+				result = -1;
+				break;
+			}
+		}
         else
         {
-            ctl->cmsg(CMSG_WARNING, VERB_NORMAL, "%s: *** illegal id in level 0: %4.4s %4d", current_filename, chunk.id, chunk.size);
-            FSKIP(chunk.size, fd);
-        }
+			ctl->cmsg(CMSG_WARNING, VERB_NORMAL,
+				    "%s: *** illegal id in level 0: %4.4s %4u",
+                    current_filename, chunk.id, (unsigned)chunk.size);
+			FSKIP(chunk.size, fd);
+		}
     }
 
-    /* parse layer structure */
-    convert_layers(sf);
+    if (!result)
+    {
+		/* parse layer structure */
+		convert_layers(sf);
+	}
 
     /* free private tables */
     if (prbags.bag)
@@ -208,7 +219,7 @@ int load_soundfont(SFInfo *sf, struct midi_file *fd)
         inbags.gen = NULL;
     }
 
-    return 0;
+    return result;
 }
 
 /*================================================================
@@ -292,11 +303,20 @@ static int chunkid(char *id)
  * process a list chunk
  *================================================================*/
 
-static int process_list(int size, SFInfo *sf, struct midi_file *fd)
+static int process_list(uint32 size, SFInfo *sf, struct midi_file *fd)
 {
     SFChunk chunk;
 
     /* read the following id string */
+    if (size < 4)
+    {
+		ctl->cmsg(CMSG_WARNING, VERB_NORMAL,
+			"%s: *** illegal size in level 1: %4.4s %4u",
+			current_filename, chunk.id, size);
+		FSKIP(size, fd); /* skip it */
+		return 0;
+	}
+
     READID(chunk.id, fd);
     size -= 4;
     ctl->cmsg(CMSG_INFO, VERB_DEBUG, "%c%c%c%c:", chunk.id[0], chunk.id[1], chunk.id[2], chunk.id[3]);
@@ -319,7 +339,7 @@ static int process_list(int size, SFInfo *sf, struct midi_file *fd)
  * process info list
  *================================================================*/
 
-static int process_info(int size, SFInfo *sf, struct midi_file *fd)
+static int process_info(uint32 size, SFInfo *sf, struct midi_file *fd)
 {
     sf->infopos = tf_tell(fd);
     sf->infosize = size;
@@ -330,9 +350,11 @@ static int process_info(int size, SFInfo *sf, struct midi_file *fd)
         SFChunk chunk;
 
         /* read a sub chunk */
-        if (READCHUNK(&chunk, fd) <= 0)
+        if (size < 8 || READCHUNK(&chunk, fd) <= 0)
             return -1;
         size -= 8;
+        if (chunk.size > size)
+			return -1;
 
         ctl->cmsg(CMSG_INFO, VERB_DEBUG, " %c%c%c%c:", chunk.id[0], chunk.id[1], chunk.id[2], chunk.id[3]);
         switch (chunkid(chunk.id))
@@ -385,16 +407,18 @@ static int process_info(int size, SFInfo *sf, struct midi_file *fd)
  * process sample data list
  *================================================================*/
 
-static int process_sdta(int size, SFInfo *sf, struct midi_file *fd)
+static int process_sdta(uint32 size, SFInfo *sf, struct midi_file *fd)
 {
     while (size > 0)
     {
         SFChunk chunk;
 
         /* read a sub chunk */
-        if (READCHUNK(&chunk, fd) <= 0)
+        if (size < 8 || READCHUNK(&chunk, fd) <= 0)
             return -1;
         size -= 8;
+        if (chunk.size > size)
+			return -1;
 
         ctl->cmsg(CMSG_INFO, VERB_DEBUG, " %c%c%c%c:", chunk.id[0], chunk.id[1], chunk.id[2], chunk.id[3]);
         switch (chunkid(chunk.id))
@@ -422,16 +446,18 @@ static int process_sdta(int size, SFInfo *sf, struct midi_file *fd)
  * process preset data list
  *================================================================*/
 
-static int process_pdta(int size, SFInfo *sf, struct midi_file *fd)
+static int process_pdta(uint32 size, SFInfo *sf, struct midi_file *fd)
 {
     while (size > 0)
     {
         SFChunk chunk;
 
         /* read a subchunk */
-        if (READCHUNK(&chunk, fd) <= 0)
+        if (size < 8 || READCHUNK(&chunk, fd) <= 0)
             return -1;
         size -= 8;
+        if (chunk.size > size)
+			return -1;
 
         ctl->cmsg(CMSG_INFO, VERB_DEBUG, " %c%c%c%c:", chunk.id[0], chunk.id[1], chunk.id[2], chunk.id[3]);
         switch (chunkid(chunk.id))
@@ -472,7 +498,7 @@ static int process_pdta(int size, SFInfo *sf, struct midi_file *fd)
  * store sample name list; sf1 only
  *----------------------------------------------------------------*/
 
-static void load_sample_names(int size, SFInfo *sf, struct midi_file *fd)
+static void load_sample_names(uint32 size, SFInfo *sf, struct midi_file *fd)
 {
     int i, nsamples;
     if (sf->version > 1)
@@ -507,7 +533,7 @@ static void load_sample_names(int size, SFInfo *sf, struct midi_file *fd)
  * preset header list
  *----------------------------------------------------------------*/
 
-static void load_preset_header(int size, SFInfo *sf, struct midi_file *fd)
+static void load_preset_header(uint32 size, SFInfo *sf, struct midi_file *fd)
 {
     int i;
 
@@ -539,7 +565,7 @@ static void load_preset_header(int size, SFInfo *sf, struct midi_file *fd)
  * instrument header list
  *----------------------------------------------------------------*/
 
-static void load_inst_header(int size, SFInfo *sf, struct midi_file *fd)
+static void load_inst_header(uint32 size, SFInfo *sf, struct midi_file *fd)
 {
     int i;
 
@@ -561,9 +587,9 @@ static void load_inst_header(int size, SFInfo *sf, struct midi_file *fd)
  * load preset/instrument bag list on the private table
  *----------------------------------------------------------------*/
 
-static void load_bag(int size, SFBags *bagp, struct midi_file *fd)
+static void load_bag(uint32 size, SFBags *bagp, struct midi_file *fd)
 {
-    int i;
+    uint32 i;
 
     size /= 4;
     bagp->bag = NEW(uint16, size);
@@ -579,9 +605,9 @@ static void load_bag(int size, SFBags *bagp, struct midi_file *fd)
  * load preset/instrument generator list on the private table
  *----------------------------------------------------------------*/
 
-static void load_gen(int size, SFBags *bagp, struct midi_file *fd)
+static void load_gen(uint32 size, SFBags *bagp, struct midi_file *fd)
 {
-    int i;
+    uint32 i;
 
     size /= 4;
     bagp->gen = NEW(SFGenRec, size);
@@ -597,7 +623,7 @@ static void load_gen(int size, SFBags *bagp, struct midi_file *fd)
  * load sample info list
  *----------------------------------------------------------------*/
 
-static void load_sample_info(int size, SFInfo *sf, struct midi_file *fd)
+static void load_sample_info(uint32 size, SFInfo *sf, struct midi_file *fd)
 {
     int i;
     int in_rom;
@@ -630,13 +656,13 @@ static void load_sample_info(int size, SFInfo *sf, struct midi_file *fd)
     {
         if (sf->version > 1) /* SF2 only */
             READSTR(sf->sample[i].name, fd);
-        READDW((uint32 *)&sf->sample[i].startsample, fd);
-        READDW((uint32 *)&sf->sample[i].endsample, fd);
-        READDW((uint32 *)&sf->sample[i].startloop, fd);
-        READDW((uint32 *)&sf->sample[i].endloop, fd);
+        READDW(&sf->sample[i].startsample, fd);
+        READDW(&sf->sample[i].endsample, fd);
+        READDW(&sf->sample[i].startloop, fd);
+        READDW(&sf->sample[i].endloop, fd);
         if (sf->version > 1)
         { /* SF2 only */
-            READDW((uint32 *)&sf->sample[i].samplerate, fd);
+            READDW(&sf->sample[i].samplerate, fd);
             READB(sf->sample[i].originalPitch, fd);
             READB(sf->sample[i].pitchCorrection, fd);
             READW(&sf->sample[i].samplelink, fd);
@@ -746,7 +772,7 @@ void correct_samples(SFInfo *sf)
 {
     int i;
     SFSampleInfo *sp;
-    int prev_end;
+    uint32 prev_end;
 
     prev_end = 0;
     for (sp = sf->sample, i = 0; i < sf->nsamples; i++, sp++)

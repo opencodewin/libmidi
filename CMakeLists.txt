@@ -7,7 +7,7 @@ option(USE_IMGUI           "Set to ON to build with imgui test"  ON)
 
 set(PROJECT_VER_MAJOR 1)
 set(PROJECT_VER_MINOR 0)
-set(PROJECT_VER_PATCH 2)
+set(PROJECT_VER_PATCH 3)
 set(PROJECT_VER "${PROJECT_VER_MAJOR}.${PROJECT_VER_MINOR}.${PROJECT_VER_PATCH}")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations -Wno-writable-strings")

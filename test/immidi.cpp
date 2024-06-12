@@ -30,6 +30,7 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+#include <getopt.h>
 #include <SDL.h>
 #include <unistd.h>
 #include <iostream>
@@ -184,6 +185,8 @@ struct MIDI_Log
     }
 };
 
+static std::string g_soundfont_path;
+static std::string g_demo_path;
 static MIDI_Log midi_log;
 std::vector<std::string> sf_file_list;
 std::vector<std::string> sf_name_list;
@@ -1931,7 +1934,7 @@ static void Midi_Initialize(void** handle)
     // init sound font list
     sf_file_list.push_back("internal");
     sf_name_list.push_back("internal");
-    auto soundfont_path = application_setting_path + "soundfont";
+    auto soundfont_path = g_soundfont_path.empty() ? application_setting_path + "soundfont" : g_soundfont_path;
     if (!ImGuiHelper::file_exists(soundfont_path))
     {
         if (ImGuiHelper::file_exists(application_setting_path))
@@ -1987,7 +1990,7 @@ static void Midi_Initialize(void** handle)
 #endif
 
     IGFD::FileDialogConfig config;
-    config.path = demo_path;
+    config.path = g_demo_path.empty() ? demo_path : g_demo_path;
     config.filePathName = m_midi_file.empty() ? demo_path + PATH_SEP : m_midi_file;
     config.countSelectionMax = -1;
     config.flags = ImGuiFileDialogFlags_NoDialog |
@@ -2197,7 +2200,6 @@ static bool Midi_Frame(void * handle, bool app_will_quit)
 
         ImGui::EndDisabled();
         // Toggle Setting
-        ImGui::Checkbox("Piano Keyboard", &b_keyboard_view);
         if (ImGui::Checkbox("Surround Sound", &b_surround)) opt_surround_chorus = b_surround ? 1 : 0;
         if (ImGui::Checkbox("Fast Decay", &b_fast_decay)) fast_decay = b_fast_decay ? 1 : 0;
         if (ImGui::Checkbox("Modulation Wheel", &b_modulation_wheel)) opt_modulation_wheel = b_modulation_wheel ? 1 : 0;
@@ -2332,6 +2334,11 @@ static bool Midi_Frame(void * handle, bool app_will_quit)
             ImGui::ShowTooltipOnHover("%s", "Stop");
             ImGui::EndDisabled();
             ImGui::EndDisabled();
+            if (!m_running)
+            {
+                if (channel_data[0].m_decibel >= 0) channel_data[0].m_decibel = ImMax(channel_data[0].m_decibel - 4.f, 0.f);
+                if (channel_data[1].m_decibel >= 0) channel_data[1].m_decibel = ImMax(channel_data[1].m_decibel - 4.f, 0.f);
+            }
 
             ImGui::BeginDisabled(m_running || m_loading);
             ImGui::SetCursorScreenPos(control_view_pos + ImVec2(20 + time_area_x + 64 + 64, (control_view_size.y - 64) / 2));
@@ -2390,10 +2397,10 @@ static bool Midi_Frame(void * handle, bool app_will_quit)
                 opt_drum_power = drum_power;
             }
             ImGui::SameLine();
-            if (ImGui::Knob("Speed", &speed, NAN, NAN, 0.01f, 100, knob_size, circle_color,  wiper_color, track_color, tick_color, ImGui::ImGuiKnobType::IMKNOB_TICK_WIPER, "%.0f%%"))
+            if (ImGui::Knob("Speed", &speed, NAN, NAN, 1.f, 100.f, knob_size, circle_color,  wiper_color, track_color, tick_color, ImGui::ImGuiKnobType::IMKNOB_TICK_WIPER, "%.0f%%"))
             {
                 float old_speed = current_MFnode ? current_MFnode->tempo_ratio : 0;
-                if (fabs(speed - old_speed) > 0.1)
+                if (fabs(speed - old_speed) > 1.f)
                 {
                     if (speed > old_speed)
                         push_event(RC_SPEEDUP, 1);
@@ -2426,7 +2433,25 @@ static bool Midi_Frame(void * handle, bool app_will_quit)
             ImGui::TableSetupColumn("Pit", ImGuiTableColumnFlags_WidthFixed, 20);
             ImGui::TableSetupColumn("Instrument", ImGuiTableColumnFlags_WidthFixed, 100);
             ImGui::TableSetupColumn("Keyboard", ImGuiTableColumnFlags_WidthFixed, keyboard_size.x);
-            ImGui::TableHeadersRow();
+            ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
+            for (int column = 0; column < 11; column++)
+            {
+                ImGui::TableSetColumnIndex(column);
+                const char* column_name = ImGui::TableGetColumnName(column);
+                ImGui::PushID(column);
+                if (column == 10)
+                {
+                    bool type_changed = false;
+                    int view_type = b_keyboard_view ? 0 : 1;
+                    type_changed |= ImGui::RadioButton("Keyboard", &view_type, 0);
+                    ImGui::SameLine();
+                    type_changed |= ImGui::RadioButton("Scroll view", &view_type, 1);
+                    if (type_changed) b_keyboard_view = view_type == 0 ? true : false;
+                }
+                else
+                    ImGui::TableHeader(column_name);
+                ImGui::PopID();
+            }
             int index = 0;
             for (int i = 0; i < max_channels; i++)
             {
@@ -2599,6 +2624,30 @@ static bool Midi_Frame(void * handle, bool app_will_quit)
 
 void Application_Setup(ApplicationWindowProperty& property)
 {
+    // param commandline args
+    static struct option long_options[] = {
+        { "soundfont_dir", required_argument, NULL, 'f' },
+        { "demo_dir", required_argument, NULL, 'd' },
+        { 0, 0, 0, 0 }
+    };
+
+    if (property.argc > 1 && property.argv)
+    {
+        int o = -1;
+        int option_index = 0;
+        while ((o = getopt_long(property.argc, property.argv, "f:d:", long_options, &option_index)) != -1)
+        {
+            if (o == -1)
+                break;
+            switch (o)
+            {
+                case 'f': g_soundfont_path = std::string(optarg); break;
+                case 'd': g_demo_path = std::string(optarg); break;
+                default: break;
+            }
+        }
+    }
+
     property.name = APP_NAME;
     property.viewport = false;
     property.docking = false;

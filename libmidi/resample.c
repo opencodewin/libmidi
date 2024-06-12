@@ -554,7 +554,7 @@ static resample_t *rs_plain_c(int v, int32 *countptr)
         vp->timeout = 1;
         *countptr = count;
     }
-    vp->sample_offset = ((splen_t)ofs << FRACTION_BITS);
+    vp->sample_offset = (spoff_fixed_t)ofs << FRACTION_BITS;
     return resample_buffer + resample_buffer_offset;
 }
 
@@ -651,7 +651,7 @@ static resample_t *rs_loop_c(Voice *vp, int32 count)
         dest += i;
         ofs += i;
     }
-    vp->sample_offset = ((splen_t)ofs << FRACTION_BITS);
+    vp->sample_offset = (spoff_fixed_t)ofs << FRACTION_BITS;
     return resample_buffer + resample_buffer_offset;
 }
 
@@ -1262,7 +1262,7 @@ resample_t *resample_voice(int v, int32 *countptr)
             *countptr = (int32)(vp->sample->data_length >> FRACTION_BITS) - ofs;
         }
         else
-            vp->sample_offset += *countptr << FRACTION_BITS;
+            vp->sample_offset += (spoff_fixed_t)*countptr << FRACTION_BITS;
 
         for (i = 0; i < *countptr; i++)
         {
