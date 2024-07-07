@@ -1999,7 +1999,7 @@ static void Midi_Initialize(void** handle)
                             ImGuiFileDialogFlags_HideColumnDate |
                             ImGuiFileDialogFlags_ShowBookmark |
                             ImGuiFileDialogFlags_ReadOnlyFileNameField |
-                            ImGuiFileDialogFlags_CaseInsensitiveExtention |
+                            ImGuiFileDialogFlags_CaseInsensitiveExtentionFiltering |
                             ImGuiFileDialogFlags_AllowDirectorySelect |
                             ImGuiFileDialogFlags_PathDecompositionShort;
     ImGuiFileDialog::Instance()->OpenDialog("embedded", ICON_IGFD_FOLDER_OPEN " Choose File", 
@@ -2350,7 +2350,7 @@ static bool Midi_Frame(void * handle, bool app_will_quit)
                 config.userDatas = IGFDUserDatas("SaveFile");
                 config.flags = ImGuiFileDialogFlags_ShowBookmark |
                             ImGuiFileDialogFlags_DontShowHiddenFiles |
-                            ImGuiFileDialogFlags_CaseInsensitiveExtention |
+                            ImGuiFileDialogFlags_CaseInsensitiveExtentionFiltering |
                             ImGuiFileDialogFlags_ConfirmOverwrite |
                             ImGuiFileDialogFlags_Modal;
                 save_dialog->OpenDialog("ChooseFileDlgKey", ICON_IGFD_SAVE " Choose a File", 
