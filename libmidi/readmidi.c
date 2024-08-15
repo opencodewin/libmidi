@@ -1766,11 +1766,11 @@ int parse_sysex_event_multi(uint8 *val, int32 len, MidiEvent *evm)
             return num_events;
         }
 
-        /* drum channel */
-        dp = rhythm_part[(val[5] & 0xF0) >> 4];
-
         /* calculate user drumset number */
-        udn = (val[5] & 0xF0) >> 4;
+        udn = (val[5] & 0x10) >> 4;
+
+        /* drum channel */
+        dp = rhythm_part[udn];
 
         addr_h = val[4];
         addr_m = val[5];
