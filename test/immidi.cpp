@@ -1994,14 +1994,14 @@ static void Midi_Initialize(void** handle)
     config.filePathName = m_midi_file.empty() ? demo_path + PATH_SEP : m_midi_file;
     config.countSelectionMax = -1;
     config.flags = ImGuiFileDialogFlags_NoDialog |
-                            ImGuiFileDialogFlags_NoButton |
-                            ImGuiFileDialogFlags_DontShowHiddenFiles |
-                            ImGuiFileDialogFlags_HideColumnDate |
-                            ImGuiFileDialogFlags_ShowBookmark |
-                            ImGuiFileDialogFlags_ReadOnlyFileNameField |
-                            ImGuiFileDialogFlags_CaseInsensitiveExtentionFiltering |
-                            ImGuiFileDialogFlags_AllowDirectorySelect |
-                            ImGuiFileDialogFlags_PathDecompositionShort;
+                    ImGuiFileDialogFlags_NoButton |
+                    ImGuiFileDialogFlags_DontShowHiddenFiles |
+                    ImGuiFileDialogFlags_HideColumnDate |
+                    ImGuiFileDialogFlags_ShowBookmark |
+                    ImGuiFileDialogFlags_ReadOnlyFileNameField |
+                    ImGuiFileDialogFlags_CaseInsensitiveExtentionFiltering |
+                    ImGuiFileDialogFlags_AllowDirectorySelect |
+                    ImGuiFileDialogFlags_PathDecompositionShort;
     ImGuiFileDialog::Instance()->OpenDialog("embedded", ICON_IGFD_FOLDER_OPEN " Choose File", 
                                                             "MIDI files (*.mid *.midi){.mid,.midi,.MID,.MIDI}",
                                                             config);
