@@ -2109,7 +2109,7 @@ static bool Midi_Frame(void * handle, bool app_will_quit)
     {
         ImGui::BeginDisabled(m_running || m_loading);
         // File Dialog
-        if (ImGuiFileDialog::Instance()->Display("embedded", ImGuiWindowFlags_NoCollapse, ImVec2(0,0), ImVec2(0,400)))
+        if (ImGuiFileDialog::Instance()->Display("embedded", ImGuiWindowFlags_NoCollapse, ImVec2(0,400)))
         {
             if (ImGuiFileDialog::Instance()->IsOk())
             {
