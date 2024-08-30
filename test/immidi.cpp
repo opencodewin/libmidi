@@ -3,11 +3,9 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui_internal.h>
 #include <imgui_helper.h>
-#include <imgui_extra_widget.h>
 #include <imgui_fft.h>
 #include <dir_iterate.h>
-#include <ImGuiTabWindow.h>
-#include <ImGuiFileDialog.h>
+#include "ImGuiFileDialog.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -185,6 +183,743 @@ struct MIDI_Log
     }
 };
 
+#define KEY_NUM 58
+static inline bool has_black(int key) 
+{
+    return (!((key - 1) % 7 == 0 || (key - 1) % 7 == 3) && key != KEY_NUM - 1);
+}
+class Piano {
+public:
+    int key_states[256] = {0};
+    void up(int key) { key_states[key] = 0; }
+    void down(int key, int velocity) { key_states[key] = velocity; }
+    void reset() { memset(key_states, 0, sizeof(key_states)); }
+    void draw_keyboard(ImVec2 size, bool input = false)
+    {
+        static char key_name[] = { 'Q', '2', 'W', '3', 'E', 'R', '5', 'T', '6', 'Y', '7', 'U', 'Z', 'S', 'X', 'D', 'C', 'V', 'G', 'B', 'H', 'N', 'J', 'M'};
+        char buf[4];
+        ImGuiIO &io = ImGui::GetIO();
+        ImU32 Black = IM_COL32(0, 0, 0, 255);
+        ImU32 White = IM_COL32(255, 255, 255, 255);
+        ImU32 White_Bark = IM_COL32(208, 208, 208, 255);
+        ImU32 EventSustained = IM_COL32(192,192,192,255);
+        ImU32 EventBlack = IM_COL32(255,0,0,255);
+        ImGui::BeginGroup();
+        ImDrawList *draw_list = ImGui::GetWindowDrawList();
+        ImVec2 p = ImGui::GetCursorScreenPos();
+        float key_width = size.x / KEY_NUM;
+        float white_key_height = size.y;
+        float black_key_height = size.y * 3.f / 5.f;
+        int cur_key = 21;
+        for (int key = 0; key < KEY_NUM; key++)
+        {
+            ImRect key_rect(ImVec2(p.x + key * key_width, p.y), ImVec2(p.x + key * key_width + key_width, p.y + white_key_height));
+            ImU32 col = White;
+            bool draw_text = false;
+            char key_name_str = ' ';
+            if (input)
+            {
+                if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && 
+                    key_rect.Contains(io.MousePos) && 
+                    (key_rect.Max.y - io.MousePos.y) < (white_key_height - black_key_height))
+                    key_states[cur_key] += 127;
+
+                if (ImGui::IsKeyDown(ImGuiKey_LeftShift) && !ImGui::IsKeyDown(ImGuiKey_RightShift) && !ImGui::IsKeyDown(ImGuiKey_RightAlt) && cur_key >= 24 && cur_key < 48)
+                {
+                    col = White;
+                    draw_text = true;
+                    key_name_str = key_name[cur_key - 24];
+                }
+                else if (!ImGui::IsKeyDown(ImGuiKey_LeftShift) && !ImGui::IsKeyDown(ImGuiKey_RightShift) && !ImGui::IsKeyDown(ImGuiKey_RightAlt) && cur_key >= 48 && cur_key < 72)
+                {
+                    col = White;
+                    draw_text = true;
+                    key_name_str = key_name[cur_key - 48];
+                }
+                else if (ImGui::IsKeyDown(ImGuiKey_RightAlt) && !ImGui::IsKeyDown(ImGuiKey_LeftShift) && !ImGui::IsKeyDown(ImGuiKey_RightShift) && cur_key >= 72 && cur_key < 96)
+                {
+                    col = White;
+                    draw_text = true;
+                    key_name_str = key_name[cur_key - 72];
+                }
+                else if (ImGui::IsKeyDown(ImGuiKey_RightShift) && !ImGui::IsKeyDown(ImGuiKey_LeftShift) && !ImGui::IsKeyDown(ImGuiKey_RightAlt) && cur_key >= 96 && cur_key < 120)
+                {
+                    col = White;
+                    draw_text = true;
+                    key_name_str = key_name[cur_key - 96];
+                }
+                else
+                    col = White_Bark;
+            }
+
+            if (key_states[cur_key])
+            {
+                if (key_states[cur_key] == -1)
+                    col = EventSustained;
+                else if (key_states[cur_key] > 0)
+                {
+                    int velocity = 255 - (key_states[cur_key] > 127 ? 127 : key_states[cur_key]) * 2;
+                    col = IM_COL32(velocity, 255, velocity, 255);
+                }
+            }
+            draw_list->AddRectFilled(key_rect.Min, key_rect.Max, col, 2, ImDrawFlags_RoundCornersAll);
+            draw_list->AddRect(key_rect.Min, key_rect.Max, Black, 2, ImDrawFlags_RoundCornersAll);
+            if (draw_text && key_name_str != ' ')
+            {
+                ImFormatString(buf, 4, "%c\n", key_name_str);
+                auto font_size = ImGui::CalcTextSize(buf);
+                auto text_pos = ImVec2(key_rect.Min.x + (key_rect.GetWidth() - font_size.x) / 2, key_rect.Max.y - font_size.y - 4);
+                draw_list->AddText(text_pos, IM_COL32_BLACK, buf);
+            }
+            cur_key++;
+            if (has_black(key))
+            {
+                cur_key++;
+            }
+        }
+        cur_key = 22;
+        for (int key = 0; key < KEY_NUM; key++)
+        {
+            if (has_black(key))
+            {
+                ImRect key_rect(ImVec2(p.x + key * key_width + key_width * 3 / 4, p.y), ImVec2(p.x + key * key_width + key_width * 5 / 4 + 1, p.y + black_key_height));
+                ImU32 col = Black;
+                bool draw_text = false;
+                char key_name_str = ' ';
+                if (input)
+                {
+                    if (key_rect.Contains(io.MousePos) && ImGui::IsMouseDown(ImGuiMouseButton_Left))
+                        key_states[cur_key] += 127;
+                    if (ImGui::IsKeyDown(ImGuiKey_LeftShift) && !ImGui::IsKeyDown(ImGuiKey_RightShift) && !ImGui::IsKeyDown(ImGuiKey_RightAlt) && cur_key >= 24 && cur_key < 48)
+                    {
+                        draw_text = true;
+                        key_name_str = key_name[cur_key - 24];
+                    }
+                    else if (!ImGui::IsKeyDown(ImGuiKey_LeftShift) && !ImGui::IsKeyDown(ImGuiKey_RightShift) && !ImGui::IsKeyDown(ImGuiKey_RightAlt) && cur_key >= 48 && cur_key < 72)
+                    {
+                        draw_text = true;
+                        key_name_str = key_name[cur_key - 48];
+                    }
+                    else if (ImGui::IsKeyDown(ImGuiKey_RightAlt) && !ImGui::IsKeyDown(ImGuiKey_LeftShift) && !ImGui::IsKeyDown(ImGuiKey_RightShift) && cur_key >= 72 && cur_key < 96)
+                    {
+                        draw_text = true;
+                        key_name_str = key_name[cur_key - 72];
+                    }
+                    else if (ImGui::IsKeyDown(ImGuiKey_RightShift) && !ImGui::IsKeyDown(ImGuiKey_LeftShift) && !ImGui::IsKeyDown(ImGuiKey_RightAlt) && cur_key >= 96 && cur_key < 120)
+                    {
+                        draw_text = true;
+                        key_name_str = key_name[cur_key - 96];
+                    }
+                }
+                if (key_states[cur_key])
+                {
+                    if (key_states[cur_key] == -1)
+                        col = EventSustained;
+                    else if (key_states[cur_key] > 0)
+                    {
+                        int velocity = 255 - (key_states[cur_key] > 127 ? 127 : key_states[cur_key]) * 2;
+                        col = IM_COL32(255, velocity, velocity, 255);
+                    }
+                }
+                draw_list->AddRectFilled(key_rect.Min, key_rect.Max, col, 2, ImDrawFlags_RoundCornersAll);
+                draw_list->AddRect(key_rect.Min, key_rect.Max, Black, 2, ImDrawFlags_RoundCornersAll);
+                if (draw_text && key_name_str != ' ')
+                {
+                    ImFormatString(buf, 4, "%c\n", key_name_str);
+                    auto font_size = ImGui::CalcTextSize(buf);
+                    auto text_pos = ImVec2(key_rect.Min.x + (key_rect.GetWidth() - font_size.x) / 2, key_rect.Max.y - font_size.y - 4);
+                    draw_list->AddText(text_pos, IM_COL32_WHITE, buf);
+                }
+                cur_key += 2;
+            } 
+            else
+            {
+                cur_key++;
+            }
+        }
+        if (input)
+        {
+            /*                 1#  2#      4#  5#  6#
+             *      ┏━━━┯━━━━┯━━━┯━━━┯━━━┯━━━┯━━━┯━━━┯━━━┯━━━┯━━━┯━━━┯━━━┯━━┓
+             *      ┃ ` │ 1  │ 2 │ 3 │ 4 │ 5 │ 6 │ 7 │ 8 │ 9 │ 0 │ - │ = │BS┃
+             *      ┠───┼───┬┴──┬┴──┬┴──┬┴──┬┴──┬┴──┬┴──┬┴──┬┴──┬┴──┬┴──┬┴──┨
+             *      ┃Tab│Q1f│W2f│E3f│R4f│T5f│Y6f│U7f│ I │ O │ P │ [ │ ] │ | ┃
+             *      ┠───┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴───┨
+             *      ┃ Cap │ A │S1#│D2#│ F │G4#│H5#│J6#│ K │ L │ ; │ ' │ Ret ┃
+             *      ┠─────┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─────┨
+             * f2-> ┃ Shift │Z 1│X 2│C 3│V 4│B 5│N 6│M 7│ , │ . │ / │ Shift ┃<-g2
+             *      ┠──┬───┬┴──┬┴──┬┴───┴───┴───┴───┴───┼───┼───┼───┼───┬───┨
+             *      ┃Fn│Ctl│Alt│Cmd│      Space         │Cmd│Alt│ < │ v │ > ┃
+             *      ┗━━┷━━━┷━━━┷━━━┷━━━━━━━━━━━━━━━━━━━━┷━━━┷━━━┷━━━┷━━━┷━━━┛
+             *                             clean             g3
+            */
+            auto check_key = [&](ImGuiKey key, int ckey)
+            {
+                if          (ImGui::IsKeyDown(key))        key_states[ckey] += 127;
+                else if (ImGui::IsKeyReleased(key))  { if (key_states[ckey] > 0) key_states[ckey] = -2; }
+            };
+
+            if (ImGui::IsKeyDown(ImGuiKey_Space) || ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+            {
+                for (int i = 0; i < 256; i++) if (key_states[i] > 0) key_states[i] = -2;
+            }
+            else if (ImGui::IsKeyReleased(ImGuiKey_LeftShift))
+            {
+                for (int i = 0; i < 48; i++) if (key_states[i] > 0) key_states[i] = -2;
+            }
+            else if (ImGui::IsKeyReleased(ImGuiKey_RightAlt))
+            {
+                for (int i = 72; i < 96; i++) if (key_states[i] > 0) key_states[i] = -2;
+            }
+            else if (ImGui::IsKeyReleased(ImGuiKey_RightShift))
+            {
+                for (int i = 96; i < 120; i++) if (key_states[i] > 0) key_states[i] = -2;
+            }
+            else
+            {
+                int cur_key = 48;
+                if (ImGui::IsKeyDown(ImGuiKey_LeftShift) && !ImGui::IsKeyDown(ImGuiKey_RightShift) && !ImGui::IsKeyDown(ImGuiKey_RightAlt))
+                    cur_key -= 12 * 2;
+                else if (ImGui::IsKeyDown(ImGuiKey_RightAlt) && !ImGui::IsKeyDown(ImGuiKey_LeftShift) && !ImGui::IsKeyDown(ImGuiKey_RightShift))
+                    cur_key += 12 * 2;
+                else if (ImGui::IsKeyDown(ImGuiKey_RightShift) && !ImGui::IsKeyDown(ImGuiKey_LeftShift) && !ImGui::IsKeyDown(ImGuiKey_RightAlt))
+                    cur_key += 12 * 4;
+                // low key
+                check_key(ImGuiKey_Q, cur_key++);   // F1
+                check_key(ImGuiKey_2, cur_key++);   // F1#
+                check_key(ImGuiKey_W, cur_key++);   // F2
+                check_key(ImGuiKey_3, cur_key++);   // F2#
+                check_key(ImGuiKey_E, cur_key++);   // F3
+                check_key(ImGuiKey_R, cur_key++);   // F4
+                check_key(ImGuiKey_5, cur_key++);   // F4#
+                check_key(ImGuiKey_T, cur_key++);   // F5
+                check_key(ImGuiKey_6, cur_key++);   // F5#
+                check_key(ImGuiKey_Y, cur_key++);   // F6
+                check_key(ImGuiKey_7, cur_key++);   // F6#
+                check_key(ImGuiKey_U, cur_key++);   // F7
+                // high key
+                check_key(ImGuiKey_Z, cur_key++);   // C1
+                check_key(ImGuiKey_S, cur_key++);   // C1#
+                check_key(ImGuiKey_X, cur_key++);   // C2
+                check_key(ImGuiKey_D, cur_key++);   // C2#
+                check_key(ImGuiKey_C, cur_key++);   // C3
+                check_key(ImGuiKey_V, cur_key++);   // C4
+                check_key(ImGuiKey_G, cur_key++);   // C4#
+                check_key(ImGuiKey_B, cur_key++);   // C5
+                check_key(ImGuiKey_H, cur_key++);   // C5#
+                check_key(ImGuiKey_N, cur_key++);   // C6
+                check_key(ImGuiKey_J, cur_key++);   // C6#
+                check_key(ImGuiKey_M, cur_key++);   // C7
+            }
+        }
+        ImGui::InvisibleButton("##keyboard", size);
+        ImGui::EndGroup();
+    }
+};
+
+static int PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 frame_size, bool b_tooltops, bool b_comband)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems)
+        return -1;
+
+    const ImGuiStyle& style = g.Style;
+    const ImGuiID id = window->GetID(label);
+
+    const ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
+    if (frame_size.x == 0.0f)
+        frame_size.x = ImGui::CalcItemWidth();
+    if (frame_size.y == 0.0f)
+        frame_size.y = label_size.y + (style.FramePadding.y * 2);
+
+    const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + frame_size);
+    const ImRect inner_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
+    const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0));
+    ImGui::ItemSize(total_bb, style.FramePadding.y);
+    if (!ImGui::ItemAdd(total_bb, 0, &frame_bb))
+        return -1;
+    const bool hovered = b_tooltops /*&& ItemHoverable(frame_bb, id, ImGuiItemFlags_None)*/; // Modify By Dicky
+
+    // Determine scale from values if not specified
+    if (scale_min == FLT_MAX || scale_max == FLT_MAX)
+    {
+        float v_min = FLT_MAX;
+        float v_max = -FLT_MAX;
+        for (int i = 0; i < values_count; i++)
+        {
+            const float v = values_getter(data, i);
+            if (v != v) // Ignore NaN values
+                continue;
+            v_min = ImMin(v_min, v);
+            v_max = ImMax(v_max, v);
+        }
+        if (scale_min == FLT_MAX)
+            scale_min = v_min;
+        if (scale_max == FLT_MAX)
+            scale_max = v_max;
+    }
+
+    ImGui::RenderFrame(frame_bb.Min, frame_bb.Max, ImGui::GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
+
+    const int values_count_min = (plot_type == ImGuiPlotType_Lines) ? 2 : 1;
+    int idx_hovered = -1;
+    if (values_count >= values_count_min)
+    {
+        int res_w = ImMin((int)frame_size.x, values_count) + ((plot_type == ImGuiPlotType_Lines) ? -1 : 0);
+        int item_count = values_count + ((plot_type == ImGuiPlotType_Lines) ? -1 : 0);
+
+        const ImU32 col_base = ImGui::GetColorU32((plot_type == ImGuiPlotType_Lines) ? ImGuiCol_PlotLines : ImGuiCol_PlotHistogram);
+        const ImU32 col_hovered = ImGui::GetColorU32((plot_type == ImGuiPlotType_Lines) ? ImGuiCol_PlotLinesHovered : ImGuiCol_PlotHistogramHovered);
+        const float t_step = 1.0f / (float)res_w;
+        const float inv_scale = (scale_min == scale_max) ? 0.0f : (1.0f / (scale_max - scale_min));
+
+        // Tooltip on hover
+        if (hovered && inner_bb.Contains(g.IO.MousePos))
+        {
+            const float t = ImClamp((g.IO.MousePos.x - inner_bb.Min.x) / (inner_bb.Max.x - inner_bb.Min.x), 0.0f, 0.9999f);
+            const int v_idx = (int)(t * item_count);
+            IM_ASSERT(v_idx >= 0 && v_idx < values_count);
+
+            const float _v0 = values_getter(data, (v_idx + values_offset) % values_count);
+            const float _v1 = values_getter(data, (v_idx + 1 + values_offset) % values_count);
+            if (b_comband)
+            {
+                ImVec2 tp  = ImVec2(g.IO.MousePos.x, 1.0f - ImSaturate((_v0 - scale_min) * inv_scale)); 
+                ImVec2 pos0 = ImVec2(g.IO.MousePos.x, inner_bb.Min.y);
+                ImVec2 pos1 = ImVec2(g.IO.MousePos.x, inner_bb.Max.y);
+                ImVec2 tpos = ImLerp(inner_bb.Min, inner_bb.Max, tp);
+                tpos.x = g.IO.MousePos.x;
+                window->DrawList->AddLine(pos0, pos1, col_hovered);
+                window->DrawList->AddCircleFilled(tpos, 2, IM_COL32(0, 255, 0, 255));
+            }
+            if (plot_type == ImGuiPlotType_Lines && !b_comband)
+                ImGui::SetTooltip("%d: %8.4g\n%d: %8.4g", v_idx, _v0, v_idx + 1, _v1);
+            else if (plot_type == ImGuiPlotType_Histogram || b_comband)
+                ImGui::SetTooltip("%d: %8.4g", v_idx, _v0);
+            idx_hovered = v_idx;
+        }
+
+        float v0 = values_getter(data, (0 + values_offset) % values_count);
+        float t0 = 0.0f;
+        ImVec2 tp0 = ImVec2( t0, 1.0f - ImSaturate((v0 - scale_min) * inv_scale) );                       // Point in the normalized space of our target rectangle
+        float histogram_zero_line_t = (scale_min * scale_max < 0.0f) ? (1 + scale_min * inv_scale) : (scale_min < 0.0f ? 0.0f : 1.0f);   // Where does the zero line stands
+
+        for (int n = 0; n < res_w; n++)
+        {
+            const float t1 = t0 + t_step;
+            int v1_idx = (int)(t0 * item_count + 0.5f);
+            if (v1_idx < 0) v1_idx = 0;
+            if (v1_idx > values_count) v1_idx = values_count;
+            const float v1 = values_getter(data, (v1_idx + values_offset + 1) % values_count);
+            const ImVec2 tp1 = ImVec2( t1, 1.0f - ImSaturate((v1 - scale_min) * inv_scale) );
+
+            // NB: Draw calls are merged together by the DrawList system. Still, we should render our batch are lower level to save a bit of CPU.
+            ImVec2 pos0 = ImLerp(inner_bb.Min, inner_bb.Max, tp0);
+            ImVec2 pos1 = ImLerp(inner_bb.Min, inner_bb.Max, (plot_type == ImGuiPlotType_Lines) ? tp1 : ImVec2(tp1.x, histogram_zero_line_t));
+            if (plot_type == ImGuiPlotType_Lines)
+            {
+                window->DrawList->AddLine(pos0, pos1, idx_hovered == v1_idx ? col_hovered : col_base);
+                if (b_comband)
+                {
+                    ImVec2 _pos1 = ImLerp(inner_bb.Min, inner_bb.Max, ImVec2(tp1.x, histogram_zero_line_t));
+                    if (_pos1.x >= pos0.x + 2.0f)
+                        _pos1.x -= 1.0f;
+                    window->DrawList->AddRectFilled(pos0, _pos1, idx_hovered == v1_idx ? ImGui::GetColorU32(ImGuiCol_PlotHistogramHovered) : ImGui::GetColorU32(ImGuiCol_PlotHistogram));
+                }
+            }
+            else if (plot_type == ImGuiPlotType_Histogram)
+            {
+                if (pos1.x >= pos0.x + 2.0f)
+                    pos1.x -= 1.0f;
+                window->DrawList->AddRectFilled(pos0, pos1, idx_hovered == v1_idx ? col_hovered : col_base);
+            }
+
+            t0 = t1;
+            tp0 = tp1;
+        }
+    }
+
+    // Text overlay
+    if (overlay_text)
+        ImGui::RenderTextClipped(ImVec2(frame_bb.Min.x, frame_bb.Min.y + style.FramePadding.y), frame_bb.Max, overlay_text, NULL, NULL, ImVec2(0.5f, 0.0f));
+
+    if (label_size.x > 0.0f)
+        ImGui::RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, inner_bb.Min.y), label);
+
+    // Return hovered index or -1 if none are hovered.
+    // This is currently not exposed in the public API because we need a larger redesign of the whole thing, but in the short-term we are making it available in PlotEx().
+    return idx_hovered;
+}
+
+struct PlotArrayGetterData
+{
+    const float* Values;
+    int Stride;
+
+    PlotArrayGetterData(const float* values, int stride) { Values = values; Stride = stride; }
+};
+
+static float Plot_ArrayGetter(void* data, int idx)
+{
+    PlotArrayGetterData* plot_data = (PlotArrayGetterData*)data;
+    if (!plot_data || !plot_data->Values) return 0;
+    const float v = *(const float*)(const void*)((const unsigned char*)plot_data->Values + (size_t)idx * plot_data->Stride);
+    return v;
+}
+
+static void PlotLinesEx(const char* label, const float* values, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size, int stride, bool b_tooltips, bool b_comband)
+{
+    PlotArrayGetterData data(values, stride);
+    PlotEx(ImGuiPlotType_Lines, label, &Plot_ArrayGetter, (void*)&data, values_count, values_offset, overlay_text, scale_min, scale_max, graph_size, b_tooltips, b_comband);
+}
+
+static void AddImageRotate(ImDrawList *dl, ImTextureID tex_id, ImVec2 pos, ImVec2 size, float angle, ImU32 board_col = IM_COL32(0, 0, 0, 255))
+{
+    int rotation_start_index = dl->VtxBuffer.Size;
+    dl->AddImage(tex_id, pos, pos + size);
+    if (angle != 0)
+    {
+        float rad = M_PI / 180.0 * (90.0 - angle);
+        ImVec2 l(FLT_MAX, FLT_MAX), u(-FLT_MAX, -FLT_MAX); // bounds
+        auto& buf = dl->VtxBuffer;
+        float s = sin(rad), c = cos(rad);
+        for (int i = rotation_start_index; i < buf.Size; i++)
+            l = ImMin(l, buf[i].pos), u = ImMax(u, buf[i].pos);
+        ImVec2 center = ImVec2((l.x + u.x) / 2, (l.y + u.y) / 2);
+        center = ImRotate(center, s, c) - center;
+        
+        for (int i = rotation_start_index; i < buf.Size; i++)
+            buf[i].pos = ImRotate(buf[i].pos, s, c) - center;
+    }
+}
+
+static bool Splitter(bool split_vertically, float thickness, float* size1, float* size2, float min_size1, float min_size2, float splitter_long_axis_size = -1.0f, float delay = 0.f)
+{
+	ImGuiContext& g = *GImGui;
+	ImGuiWindow* window = g.CurrentWindow;
+	ImGuiID id = window->GetID("##Splitter");
+	ImRect bb;
+	bb.Min = window->DC.CursorPos + (split_vertically ? ImVec2(*size1, 0.0f) : ImVec2(0.0f, *size1));
+	bb.Max = bb.Min + ImGui::CalcItemSize(split_vertically ? ImVec2(thickness, splitter_long_axis_size) : ImVec2(splitter_long_axis_size, thickness), 0.0f, 0.0f);
+	return ImGui::SplitterBehavior(bb, id, split_vertically ? ImGuiAxis_X : ImGuiAxis_Y, size1, size2, min_size1, min_size2, 1.0, delay);
+}
+
+static void ProgressBarPanning(float fraction, const ImVec2& size_arg = ImVec2(-FLT_MIN, 0))
+{
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems)
+        return;
+
+    ImGuiContext& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+
+    ImVec2 pos = window->DC.CursorPos;
+    ImVec2 size = ImGui::CalcItemSize(size_arg, ImGui::CalcItemWidth(), g.FontSize + style.FramePadding.y * 2.0f);
+    ImRect bb(pos, pos + size);
+    ImGui::ItemSize(size, style.FramePadding.y);
+    if (!ImGui::ItemAdd(bb, 0))
+        return;
+
+    // Render
+    ImGui::RenderFrame(bb.Min, bb.Max, ImGui::GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
+    
+    // center line
+    ImVec2 cpt1 = bb.Min + ImVec2(size.x / 2.f, 0);
+    ImVec2 cpt2 = bb.Min + ImVec2(size.x / 2.f, size.y);
+    window->DrawList->AddLine(cpt1, cpt2, IM_COL32_WHITE);
+
+    if (fraction > 0)
+    {
+        ImVec2 pt1 = bb.Min + ImVec2(size.x / 2.f, 0); // center top
+        ImVec2 pt2 = bb.Min + ImVec2(size.x * (0.5f + fraction), size.y);
+        window->DrawList->AddRectFilled(pt1, pt2, ImGui::GetColorU32(ImGuiCol_PlotHistogram), style.FrameRounding);
+    }
+    else if (fraction < 0)
+    {
+        ImVec2 pt1 = bb.Min + ImVec2(size.x * (0.5f + fraction), 0);
+        ImVec2 pt2 = bb.Min + ImVec2(size.x / 2.f, size.y); // center bottom
+        window->DrawList->AddRectFilled(pt1, pt2, ImGui::GetColorU32(ImGuiCol_PlotHistogram), style.FrameRounding);
+    }
+}
+
+static void UvMeter(ImDrawList *draw_list, char const *label, ImVec2 const &size, float *value, float v_min, float v_max, int steps = 10, float* stack = nullptr, int* count = nullptr, float background = 0.f, std::map<float, float> segment = {})
+{
+    ImVec2 pos = ImGui::GetCursorScreenPos();
+
+    ImGui::InvisibleButton(label, size);
+    float steps_size = (v_max - v_min) / (float)steps;
+    if (stack && count)
+    {
+        if (*value > *stack) 
+        {
+            *stack = *value;
+            *count = 0;
+        }
+        else
+        {
+            *(count) += 1;
+            if (*count > 10)
+            {
+                *stack -= steps_size / 2;
+                if (*stack < v_min) *stack = v_min;
+            }
+        }
+        if (*stack)
+            ImGui::UpdateData();
+    }
+
+    if (size.y > size.x)
+    {
+        float stepHeight = size.y / (v_max - v_min + 1);
+        auto y = pos.y + size.y;
+        auto hue = 0.4f;
+        auto sat = 1.0f;
+        auto lum = 0.6f;
+        for (float i = v_min; i <= v_max; i += steps_size)
+        {
+            if (segment.empty())
+                hue = 0.4f - (i / (v_max - v_min)) / 2.0f;
+            else
+            {
+                for (const auto value : segment)
+                {
+                    if (i <= value.first)
+                    {
+                        hue = value.second;
+                        break;
+                    }
+                }
+            }
+            sat = (*value < i ? 0.8 : 1.0f);
+            lum = (*value < i ? background : 1.0f);
+            draw_list->AddRectFilled(ImVec2(pos.x, y), ImVec2(pos.x + size.x, y - (stepHeight * steps_size - 1)), static_cast<ImU32>(ImColor::HSV(hue, sat, lum)));
+            y = pos.y + size.y - (i * stepHeight);
+        }
+        if (stack && count)
+        {
+            draw_list->AddLine(ImVec2(pos.x, pos.y + size.y - (*stack * stepHeight)), ImVec2(pos.x + size.x, pos.y + size.y - (*stack * stepHeight)), IM_COL32_WHITE, 2.f);
+        }
+    }
+    else
+    {
+        float stepWidth = size.x / (v_max - v_min + 1);
+        auto x = pos.x;
+        auto hue = 0.4f;
+        auto sat = 0.6f;
+        auto lum = 0.6f;
+        for (float i = v_min; i <= v_max; i += steps_size)
+        {
+            hue = 0.4f - (i / (v_max - v_min)) / 2.0f;
+            sat = (*value < i ? 0.0f : 0.6f);
+            lum = (*value < i ? 0.0f : 0.6f);
+            draw_list->AddRectFilled(ImVec2(x, pos.y), ImVec2(x + (stepWidth * steps_size - 1), pos.y + size.y), static_cast<ImU32>(ImColor::HSV(hue, sat, lum)));
+            x = pos.x + (i * stepWidth);
+        }
+        if (stack && count)
+        {
+            draw_list->AddLine(ImVec2(pos.x + (*stack * stepWidth), pos.y), ImVec2(pos.x + (*stack * stepWidth), pos.y + size.y), IM_COL32_WHITE, 2.f);
+        }
+    }
+}
+
+static void UvMeter(ImDrawList *draw_list, char const *label, ImVec2 const &size, int *value, int v_min, int v_max, int steps = 10, int* stack = nullptr, int* count = nullptr, float background = 0.f, std::map<float, float> segment = {})
+{
+    float fvalue = (float)*value;
+    float *fstack = nullptr;
+    float _f = 0.f;
+    if (stack) { fstack = &_f; *fstack = (float)*stack; }
+    UvMeter(draw_list, label, size, &fvalue, (float)v_min, (float)v_max, steps, fstack, count, background, segment);
+    *value = (int)fvalue;
+    if (stack) *stack = (int)*fstack;
+}
+
+struct ColorSet 
+{
+    ImVec4 base;
+    ImVec4 hovered;
+    ImVec4 active;
+};
+
+static void draw_circle(ImVec2 center, float _size, bool filled, int segments, float radius, ColorSet& color)
+{
+    float circle_radius = _size * radius;
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    ImU32 _color = ImGui::GetColorU32(ImGui::IsItemActive() ? color.active : ImGui::IsItemHovered(0) ? color.hovered : color.base);
+    if (filled)
+        draw_list->AddCircleFilled(center, circle_radius, _color, segments);
+    else
+        draw_list->AddCircle(center, circle_radius, _color, segments);
+}
+
+static void bezier_arc(ImVec2 center, ImVec2 start, ImVec2 end, ImVec2& c1, ImVec2 & c2)
+{
+    float ax = start[0] - center[0];
+    float ay = start[1] - center[1];
+    float bx = end[0] - center[0];
+    float by = end[1] - center[1];
+    float q1 = ax * ax + ay * ay;
+    float q2 = q1 + ax * bx + ay * by;
+    float k2 = (4.0 / 3.0) * (sqrt(2.0 * q1 * q2) - q2) / (ax * by - ay * bx);
+    c1 = ImVec2(center[0] + ax - k2 * ay, center[1] + ay + k2 * ax);
+    c2 = ImVec2(center[0] + bx + k2 * by, center[1] + by - k2 * bx);
+}
+
+static void draw_arc1(ImVec2 center, float radius, float start_angle, float end_angle, float thickness, ImU32 color, int num_segments)
+{
+    ImVec2 start = {center[0] + cos(start_angle) * radius, center[1] + sin(start_angle) * radius};
+    ImVec2 end = {center[0] + cos(end_angle) * radius, center[1] + sin(end_angle) * radius};
+    ImVec2 c1, c2;
+    bezier_arc(center, start, end, c1, c2);
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    draw_list->AddBezierCubic(start, c1, c2, end, color, thickness, num_segments);
+}
+
+static void draw_arc(ImVec2 center, float radius, float start_angle, float end_angle, float thickness, ImU32 color, int num_segments, int8_t bezier_count)
+{
+    float overlap = thickness * radius * 0.00001 * IM_PI;
+    float delta = end_angle - start_angle;
+    float bez_step = 1.0 / (float)bezier_count;
+    float mid_angle = start_angle + overlap;
+    for (int i = 0; i < bezier_count - 1; i++)
+    {
+        float mid_angle2 = delta * bez_step + mid_angle;
+        draw_arc1(center, radius, mid_angle - overlap, mid_angle2 + overlap, thickness, color, num_segments);
+        mid_angle = mid_angle2;
+    }
+    draw_arc1(center, radius, mid_angle - overlap, end_angle, thickness, color, num_segments);
+}
+
+static void draw_arc(ImVec2 center, float _radius, float _size, float radius, float start_angle, float end_angle, int segments, int8_t bezier_count, ColorSet& color)
+{
+    float track_radius = _radius * radius;
+    float track_size = _size * radius * 0.5 + 0.0001;
+    ImU32 _color = ImGui::GetColorU32(ImGui::IsItemActive() ? color.active : ImGui::IsItemHovered(0) ? color.hovered : color.base);
+    draw_arc(center, track_radius, start_angle, end_angle, track_size, _color, segments, bezier_count);
+}
+
+static void draw_tick(ImVec2 center, float radius, float start, float end, float width, float _angle, ColorSet& color)
+{
+    float tick_start = start * radius;
+    float tick_end = end * radius;
+    float _angle_cos = cos(_angle);
+    float _angle_sin = sin(_angle);
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    ImU32 _color = ImGui::GetColorU32(ImGui::IsItemActive() ? color.active : ImGui::IsItemHovered(0) ? color.hovered : color.base);
+    draw_list->AddLine(
+            ImVec2(center[0] + _angle_cos * tick_end, center[1] + _angle_sin * tick_end),
+            ImVec2(center[0] + _angle_cos * tick_start, center[1] + _angle_sin * tick_start),
+            _color,
+            width * radius);
+}
+
+static bool Knob(char const *label, float *p_value, float v_min, float v_max, float v_step, float v_default, float size,
+                ColorSet circle_color, ColorSet wiper_color, ColorSet track_color, ColorSet tick_color,
+                char const *format = nullptr, int tick_steps = 0)
+{
+    ImGuiStyle &style = ImGui::GetStyle();
+    float line_height = ImGui::GetTextLineHeight();
+    ImGuiIO &io = ImGui::GetIO();
+    ImVec2 ItemSize = ImVec2(size, size + line_height * 2 + style.ItemInnerSpacing.y * 2 + 4);
+    float radius = std::fmin(ItemSize.x, ItemSize.y) / 2.0f;
+    bool is_no_limit = isnan(v_min) || isnan(v_max);
+    ImVec2 pos = ImGui::GetCursorScreenPos();
+    ImVec2 center = ImVec2(pos.x + radius, pos.y + radius);
+    std::string ViewID = "###" + std::string(label) + "_KNOB_VIEW_CONTORL_";
+    ImGui::BeginChild(ViewID.c_str(), ItemSize, false, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+    const char* label_end = ImGui::FindRenderedTextEnd(label);
+    auto textSize = ImGui::CalcTextSize(label, label_end);
+    if (textSize.x > 0)
+    {
+        ImDrawList* draw_list = ImGui::GetWindowDrawList();
+        draw_list->AddText(ImVec2(pos.x + ((ItemSize.x / 2) - (textSize.x / 2)), pos.y + style.ItemInnerSpacing.y), ImGui::GetColorU32(ImGuiCol_Text), label, label_end);
+        center.y += line_height + 4;
+    }
+
+    ImGui::InvisibleButton(label, ImVec2(radius * 2, radius * 2 + line_height));
+
+    float step = isnan(v_step) ? (v_max - v_min) / 200.f : v_step;
+    bool value_changed = false;
+    bool is_active = ImGui::IsItemActive();
+    bool is_hovered = ImGui::IsItemHovered();
+    if (is_hovered || (is_active && ImGui::IsMouseDragging(ImGuiMouseButton_Left)))
+    {
+        ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+    }
+    if (is_active && io.MouseDelta.y != 0.0f)
+    {
+        *p_value -= io.MouseDelta.y * step;
+        if (!is_no_limit)
+        {
+            if (*p_value < v_min)
+                *p_value = v_min;
+            if (*p_value > v_max)
+                *p_value = v_max;
+        }
+        value_changed = true;
+    }
+
+    if (is_hovered && !is_active && io.MouseWheel != 0)
+    {
+        *p_value += io.MouseWheel * step;
+        if (!is_no_limit)
+        {
+            if (*p_value < v_min)
+                *p_value = v_min;
+            if (*p_value > v_max)
+                *p_value = v_max;
+        }
+        value_changed = true;
+    }
+
+    if (is_active && ImGui::IsMouseDoubleClicked(0))
+    {
+        if (*p_value != v_default)
+        {
+            *p_value = v_default;
+            value_changed = true;
+        }
+    }
+
+    float angle_min = IM_PI * 0.75;
+    float angle_max = IM_PI * 2.25;
+    float t = (*p_value - v_min) / (v_max - v_min);
+    if (is_no_limit)
+    {
+        angle_min = -IM_PI * 0.5;
+        angle_max = IM_PI * 1.5;
+        t = *p_value;
+    }
+    float angle = angle_min + (angle_max - angle_min) * t;
+
+    draw_circle(center, 0.6, true, 32, radius, circle_color);
+    if (!is_no_limit)
+    {
+        draw_arc(center, 0.85, 0.25, radius, angle_min, angle_max, 16, 2, track_color);
+        if (t > 0.01)
+            draw_arc(center, 0.85, 0.27, radius, angle_min, angle, 16, 2, wiper_color);
+    }
+    else
+    {
+        draw_circle(center, 0.75, false, 32, radius, circle_color);
+    }
+    draw_tick(center, radius, 0.4, 0.6, 0.1, angle, wiper_color);
+
+    ImGui::PushItemWidth(size);
+    std::string DragID = "###" + std::string(label) + "_KNOB_DRAG_CONTORL_";
+    if (is_no_limit)
+    {
+        ImGui::DragFloat(DragID.c_str(), p_value, step, FLT_MIN, FLT_MAX, format);
+    }
+    else
+    {
+        ImGui::DragFloat(DragID.c_str(), p_value, step, v_min, v_max, format);
+    }
+    ImGui::PopItemWidth();
+    ImGui::EndChild();
+    return value_changed;
+}
+
 static std::string g_soundfont_path;
 static std::string g_demo_path;
 static MIDI_Log midi_log;
@@ -234,7 +969,7 @@ typedef struct midi_event
 typedef struct midi_channel
 {
     char instrum_name[128];
-    ImGui::Piano key_board;
+    Piano key_board;
     int velocity;
     int volume;
     int expression;
@@ -292,7 +1027,7 @@ static bool m_paused = false;
 static bool show_midi_keyboard = false;
 static std::vector<std::pair<int, int>> events;
 static MIDIChannel midi_channels[MAX_CHANNELS];
-static ImGui::Piano midi_keyboard;
+static Piano midi_keyboard;
 static int midi_keyboard_instrum = 0;
 static bool keyboard_is_drum = false;
 
@@ -1417,7 +2152,7 @@ static void ShowMediaScopeView(int index, ImVec2 pos, ImVec2 size)
                 if (!channel_data[i].m_wave.empty())
                 {
                     ImGui::PushID(i);
-                    ImGui::PlotLinesEx("##wave", (float *)channel_data[i].m_wave.data, channel_data[i].m_wave.w, 0, nullptr, -1.0 / AudioWaveScale , 1.0 / AudioWaveScale, channel_view_size, 4, false, false);
+                    PlotLinesEx("##wave", (float *)channel_data[i].m_wave.data, channel_data[i].m_wave.w, 0, nullptr, -1.0 / AudioWaveScale , 1.0 / AudioWaveScale, channel_view_size, 4, false, false);
                     ImGui::PopID();
                 }
                 draw_list->AddRect(channel_min, channel_max, COL_SLIDER_HANDLE, 0);
@@ -1570,7 +2305,7 @@ static void ShowMediaScopeView(int index, ImVec2 pos, ImVec2 size)
                 if (!channel_data[i].m_fft.empty())
                 {
                     ImGui::PushID(i);
-                    ImGui::PlotLinesEx("##fft", (float *)channel_data[i].m_fft.data, channel_data[i].m_fft.w, 0, nullptr, 0.0, 1.0 / AudioFFTScale, channel_view_size, 4, true, true);
+                    PlotLinesEx("##fft", (float *)channel_data[i].m_fft.data, channel_data[i].m_fft.w, 0, nullptr, 0.0, 1.0 / AudioFFTScale, channel_view_size, 4, true, true);
                     ImGui::PopID();
                 }
                 draw_list->AddRect(channel_min, channel_max, COL_SLIDER_HANDLE, 0);
@@ -1644,7 +2379,7 @@ static void ShowMediaScopeView(int index, ImVec2 pos, ImVec2 size)
                     ImGui::PushID(i);
                     ImGui::ImMat db_mat_inv = channel_data[i].m_db.clone();
                     db_mat_inv += 90.f;
-                    ImGui::PlotLinesEx("##db", (float *)db_mat_inv.data, db_mat_inv.w, 0, nullptr, 0, 90.f / AudioDBScale, channel_view_size, 4, false, true);
+                    PlotLinesEx("##db", (float *)db_mat_inv.data, db_mat_inv.w, 0, nullptr, 0, 90.f / AudioDBScale, channel_view_size, 4, false, true);
                     ImGui::PopID();
                 }
                 draw_list->AddRect(channel_min, channel_max, COL_SLIDER_HANDLE, 0);
@@ -1782,7 +2517,7 @@ static void ShowMediaScopeView(int index, ImVec2 pos, ImVec2 size)
                 {
                     ImVec2 texture_pos = center - ImVec2(channel_view_size.y / 2, channel_view_size.x / 2);
                     ImGui::ImMatToTexture(channel_data[i].m_Spectrogram, channel_data[i].texture_spectrogram);
-                    ImGui::AddImageRotate(draw_list, channel_data[i].texture_spectrogram, texture_pos, ImVec2(channel_view_size.y, channel_view_size.x), -90.0);
+                    AddImageRotate(draw_list, channel_data[i].texture_spectrogram, texture_pos, ImVec2(channel_view_size.y, channel_view_size.x), -90.0);
                 }
             }
             // draw bar mark
@@ -2099,7 +2834,7 @@ static bool Midi_Frame(void * handle, bool app_will_quit)
     ImGui::PushID("##Control_Panel_Main");
     float main_width = 0.25 * window_size.x;
     float event_width = 0.75 * window_size.x;
-    ImGui::Splitter(true, 4.0f, &main_width, &event_width, 96, 96);
+    Splitter(true, 4.0f, &main_width, &event_width, 96, 96);
     ImGui::PopID();
     // add control window
     ImVec2 control_pos = window_pos + ImVec2(4, 0);
@@ -2376,28 +3111,28 @@ static bool Midi_Frame(void * handle, bool app_will_quit)
             ImVec4 active_color = ImVec4(0.4f, 0.4f, 0.4f, 1.f);
             ImVec4 hovered_color = ImVec4(0.5f, 0.5f, 0.5f, 1.f);
             ImVec4 white_color = ImVec4(1.f, 1.f, 1.f, 1.f);
-            ImGui::ColorSet circle_color = {base_color, active_color, hovered_color};
-            ImGui::ColorSet wiper_color = {base_color + color_offset, active_color + color_offset, hovered_color + color_offset};
-            ImGui::ColorSet track_color = {base_color - color_offset, active_color - color_offset, hovered_color - color_offset};
-            ImGui::ColorSet tick_color = {white_color, white_color, white_color};
+            ColorSet circle_color = {base_color, active_color, hovered_color};
+            ColorSet wiper_color = {base_color + color_offset, active_color + color_offset, hovered_color + color_offset};
+            ColorSet track_color = {base_color - color_offset, active_color - color_offset, hovered_color - color_offset};
+            ColorSet tick_color = {white_color, white_color, white_color};
             float knob_size = 84.f;
             float knob_step = NAN;
             ImGui::BeginDisabled(!m_running && !m_loading);
             float main_volume = current_MFnode ? current_MFnode->master_volume : 0;
             float drum_power = opt_drum_power;
             float speed = current_MFnode ? current_MFnode->tempo_ratio : 0;
-            if (ImGui::Knob("Main Power", &main_volume, 0.0f, 400.0f, 1.0f, 100.f, knob_size, circle_color,  wiper_color, track_color, tick_color, ImGui::ImGuiKnobType::IMKNOB_TICK_WIPER, "%.0f%%"))
+            if (Knob("Main Power", &main_volume, 0.0f, 400.0f, 1.0f, 100.f, knob_size, circle_color,  wiper_color, track_color, tick_color, "%.0f%%"))
             {
                 if (current_MFnode) current_MFnode->master_volume = main_volume;
                 push_event(RC_SET_VOLUME, current_MFnode->master_volume);
             }
             ImGui::SameLine();
-            if (ImGui::Knob("Drum Power", &drum_power, 0.0f, 200.0f, 1.0f, 100.f, knob_size, circle_color,  wiper_color, track_color, tick_color, ImGui::ImGuiKnobType::IMKNOB_TICK_WIPER, "%.0f%%"))
+            if (Knob("Drum Power", &drum_power, 0.0f, 200.0f, 1.0f, 100.f, knob_size, circle_color,  wiper_color, track_color, tick_color,  "%.0f%%"))
             {
                 opt_drum_power = drum_power;
             }
             ImGui::SameLine();
-            if (ImGui::Knob("Speed", &speed, NAN, NAN, 1.f, 100.f, knob_size, circle_color,  wiper_color, track_color, tick_color, ImGui::ImGuiKnobType::IMKNOB_TICK_WIPER, "%.0f%%"))
+            if (Knob("Speed", &speed, NAN, NAN, 1.f, 100.f, knob_size, circle_color,  wiper_color, track_color, tick_color, "%.0f%%"))
             {
                 float old_speed = current_MFnode ? current_MFnode->tempo_ratio : 0;
                 if (fabs(speed - old_speed) > 1.f)
@@ -2518,7 +3253,7 @@ static bool Midi_Frame(void * handle, bool app_will_quit)
                         case 7: // Panning
                         {
                             float val = (midi_channels[i].panning / 128.f) - 0.5f;
-                            ImGui::ProgressBarPanning(val, ImVec2(48, channel_hight - 2));
+                            ProgressBarPanning(val, ImVec2(48, channel_hight - 2));
                         }
                         break;
                         case 8: // Pitch Bend
@@ -2588,9 +3323,9 @@ static bool Midi_Frame(void * handle, bool app_will_quit)
         int l_level = channel_data[0].m_decibel;
         int r_level = channel_data[1].m_decibel;
         ImGui::SetCursorScreenPos(AudioUVLeftPos);
-        ImGui::UvMeter("##luv", AudioUVLeftSize, &l_level, 0, 100, AudioUVLeftSize.y / 4, &left_stack, &left_count);
+        UvMeter(draw_list, "##luv", AudioUVLeftSize, &l_level, 0, 100, AudioUVLeftSize.y / 4, &left_stack, &left_count);
         ImGui::SetCursorScreenPos(AudioUVRightPos);
-        ImGui::UvMeter("##ruv", AudioUVRightSize, &r_level, 0, 100, AudioUVRightSize.y / 4, &right_stack, &right_count);
+        UvMeter(draw_list, "##ruv", AudioUVRightSize, &r_level, 0, 100, AudioUVRightSize.y / 4, &right_stack, &right_count);
 
         ImGui::Separator();
         

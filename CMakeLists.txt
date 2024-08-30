@@ -6,8 +6,8 @@ option(USE_STATIC          "Set to ON to build Static Library"  OFF)
 option(USE_IMGUI           "Set to ON to build with imgui test"  ON)
 
 set(PROJECT_VER_MAJOR 1)
-set(PROJECT_VER_MINOR 0)
-set(PROJECT_VER_PATCH 3)
+set(PROJECT_VER_MINOR 1)
+set(PROJECT_VER_PATCH 0)
 set(PROJECT_VER "${PROJECT_VER_MAJOR}.${PROJECT_VER_MINOR}.${PROJECT_VER_PATCH}")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations -Wno-writable-strings")
@@ -76,14 +76,6 @@ set_target_properties(
     LIBRARY_OUTPUT_DIRECTORY "${FRAMEWORKS_PATH}"
     RUNTIME_OUTPUT_DIRECTORY "${FRAMEWORKS_PATH}"
 )
-if(IMGUI_VULKAN_SHADER)
-set_target_properties(
-    VkShader
-    PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${FRAMEWORKS_PATH}"
-    RUNTIME_OUTPUT_DIRECTORY "${FRAMEWORKS_PATH}"
-)
-endif(IMGUI_VULKAN_SHADER)
 
 include_directories(
     ${IMGUI_INCLUDE_DIRS}
@@ -106,6 +98,7 @@ add_executable(
     immidi
     MACOSX_BUNDLE
     test/immidi.cpp
+    test/ImGuiFileDialog.cpp
     ${IMGUI_APP_ENTRY_SRC}
     ${MACOSX_BUNDLE_ICON_FILE}
 )
